@@ -1,16 +1,22 @@
 package vn.sapo.service.impl;
 
-import vn.sapo.service.TaskService;
-import vn.sapo.domain.Task;
-import vn.sapo.repository.TaskRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static org.elasticsearch.index.query.QueryBuilders.*;
 
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import vn.sapo.domain.Task;
+import vn.sapo.repository.TaskRepository;
+import vn.sapo.repository.search.TaskSearchRepository;
+import vn.sapo.service.TaskService;
+import vn.sapo.service.dto.TaskDTO;
+import vn.sapo.service.mapper.TaskMapper;
 
 /**
  * Service Implementation for managing {@link Task}.
@@ -23,55 +29,78 @@ public class TaskServiceImpl implements TaskService {
 
     private final TaskRepository taskRepository;
 
-    public TaskServiceImpl(TaskRepository taskRepository) {
+    private final TaskMapper taskMapper;
+
+    private final TaskSearchRepository taskSearchRepository;
+
+    public TaskServiceImpl(TaskRepository taskRepository, TaskMapper taskMapper, TaskSearchRepository taskSearchRepository) {
         this.taskRepository = taskRepository;
+        this.taskMapper = taskMapper;
+        this.taskSearchRepository = taskSearchRepository;
     }
 
-    /**
-     * Save a task.
-     *
-     * @param task the entity to save.
-     * @return the persisted entity.
-     */
     @Override
-    public Task save(Task task) {
-        log.debug("Request to save Task : {}", task);
-        return taskRepository.save(task);
+    public TaskDTO save(TaskDTO taskDTO) {
+        log.debug("Request to save Task : {}", taskDTO);
+        Task task = taskMapper.toEntity(taskDTO);
+        task = taskRepository.save(task);
+        TaskDTO result = taskMapper.toDto(task);
+        taskSearchRepository.save(task);
+        return result;
     }
 
-    /**
-     * Get all the tasks.
-     *
-     * @return the list of entities.
-     */
+    @Override
+    public Optional<TaskDTO> partialUpdate(TaskDTO taskDTO) {
+        log.debug("Request to partially update Task : {}", taskDTO);
+
+        return taskRepository
+            .findById(taskDTO.getId())
+            .map(
+                existingTask -> {
+                    taskMapper.partialUpdate(existingTask, taskDTO);
+
+                    return existingTask;
+                }
+            )
+            .map(taskRepository::save)
+            .map(
+                savedTask -> {
+                    taskSearchRepository.save(savedTask);
+
+                    return savedTask;
+                }
+            )
+            .map(taskMapper::toDto);
+    }
+
     @Override
     @Transactional(readOnly = true)
-    public List<Task> findAll() {
+    public List<TaskDTO> findAll() {
         log.debug("Request to get all Tasks");
-        return taskRepository.findAll();
+        return taskRepository.findAll().stream().map(taskMapper::toDto).collect(Collectors.toCollection(LinkedList::new));
     }
 
-    /**
-     * Get one task by id.
-     *
-     * @param id the id of the entity.
-     * @return the entity.
-     */
     @Override
     @Transactional(readOnly = true)
-    public Optional<Task> findOne(Long id) {
+    public Optional<TaskDTO> findOne(Long id) {
         log.debug("Request to get Task : {}", id);
-        return taskRepository.findById(id);
+        return taskRepository.findById(id).map(taskMapper::toDto);
     }
 
-    /**
-     * Delete the task by id.
-     *
-     * @param id the id of the entity.
-     */
     @Override
     public void delete(Long id) {
         log.debug("Request to delete Task : {}", id);
         taskRepository.deleteById(id);
+        taskSearchRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TaskDTO> search(String query) {
+        log.debug("Request to search Tasks for query {}", query);
+        return StreamSupport
+            .stream(taskSearchRepository.search(queryStringQuery(query)).spliterator(), false)
+            .map(taskMapper::toDto)
+            .collect(Collectors.toList());
     }
 }

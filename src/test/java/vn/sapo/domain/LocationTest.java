@@ -1,13 +1,14 @@
 package vn.sapo.domain;
 
-import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
 import vn.sapo.web.rest.TestUtil;
 
-public class LocationTest {
+class LocationTest {
 
     @Test
-    public void equalsVerifier() throws Exception {
+    void equalsVerifier() throws Exception {
         TestUtil.equalsVerifier(Location.class);
         Location location1 = new Location();
         location1.setId(1L);

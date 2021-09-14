@@ -1,10 +1,12 @@
 {
-  "jdemoApp": {
+  "goApp": {
     "country": {
       "home": {
         "title": "Countries",
+        "refreshListLabel": "Refresh list",
         "createLabel": "Create a new Country",
         "createOrEditLabel": "Create or edit a Country",
+        "search": "Search for Country",
         "notFound": "No Countries found"
       },
       "created": "A new Country is created with identifier {{ param }}",
@@ -16,6 +18,7 @@
       "detail": {
         "title": "Country"
       },
+      "id": "ID",
       "countryName": "Country Name",
       "region": "Region"
     }

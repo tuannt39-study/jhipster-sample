@@ -1,16 +1,61 @@
-version: '2'
+# This configuration is intended for development purpose, it's **your** responsibility to harden it for production
+version: '3.8'
 services:
-  jdemo-app:
-    image: jdemo
+  go-app:
+    image: go
     environment:
       - _JAVA_OPTIONS=-Xmx512m -Xms256m
-      - SPRING_PROFILES_ACTIVE=prod,swagger
+      - SPRING_PROFILES_ACTIVE=prod,api-docs
       - MANAGEMENT_METRICS_EXPORT_PROMETHEUS_ENABLED=true
-      - SPRING_DATASOURCE_URL=jdbc:mariadb://jdemo-mariadb:3306/jdemo
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://go-mariadb:3306/go?useLegacyDatetimeCode=false&serverTimezone=UTC
+      - SPRING_LIQUIBASE_URL=jdbc:mariadb://go-mariadb:3306/go?useLegacyDatetimeCode=false&serverTimezone=UTC
       - JHIPSTER_SLEEP=120 # gives time for mariadb server to start
+      - SPRING_ELASTICSEARCH_REST_URIS=http://go-elasticsearch:9200
+      - KAFKA_BOOTSTRAPSERVERS=kafka:9092
+    # If you want to expose these ports outside your dev PC,
+    # remove the "127.0.0.1:" prefix
     ports:
-      - 8080:8080
-  jdemo-mariadb:
-    extends:
-      file: mariadb.yml
-      service: jdemo-mariadb
+      - 127.0.0.1:8080:8080
+  go-mariadb:
+    image: mariadb:10.6.1
+    # volumes:
+    #   - ~/volumes/jhipster/go/mysql/:/var/lib/mysql/
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
+      - MYSQL_DATABASE=go
+    # If you want to expose these ports outside your dev PC,
+    # remove the "127.0.0.1:" prefix
+    ports:
+      - 127.0.0.1:3306:3306
+    command: mysqld --lower_case_table_names=1 --skip-ssl --character_set_server=utf8mb4 --explicit_defaults_for_timestamp
+  go-elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.9.3
+    # volumes:
+    #   - ~/volumes/jhipster/go/elasticsearch/:/usr/share/elasticsearch/data/
+    # If you want to expose these ports outside your dev PC,
+    # remove the "127.0.0.1:" prefix
+    ports:
+      - 127.0.0.1:9200:9200
+      - 127.0.0.1:9300:9300
+    environment:
+      - 'ES_JAVA_OPTS=-Xms1024m -Xmx1024m'
+      - 'discovery.type=single-node'
+  kafka:
+    image: confluentinc/cp-kafka:5.5.4
+    # If you want to expose these ports outside your dev PC,
+    # remove the "127.0.0.1:" prefix
+    ports:
+      - 127.0.0.1:9092:9092
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_ADVERTISED_HOST_NAME: kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:5.5.4
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000

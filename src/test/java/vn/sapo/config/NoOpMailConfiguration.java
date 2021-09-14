@@ -1,15 +1,16 @@
 package vn.sapo.config;
 
-import vn.sapo.service.MailService;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import vn.sapo.service.MailService;
+
 @Configuration
 public class NoOpMailConfiguration {
+
     private final MailService mockMailService;
 
     public NoOpMailConfiguration() {

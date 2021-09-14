@@ -1,10 +1,12 @@
 {
-  "jdemoApp": {
+  "goApp": {
     "employee": {
       "home": {
         "title": "Employees",
+        "refreshListLabel": "Refresh list",
         "createLabel": "Thêm mới một Employee",
         "createOrEditLabel": "Thêm mới hoặc cập nhật Employee",
+        "search": "Tìm Employee",
         "notFound": "No Employees found"
       },
       "created": "Một Employee mới được tạo với định danh {{ param }}",
@@ -16,6 +18,7 @@
       "detail": {
         "title": "Employee"
       },
+      "id": "ID",
       "firstName": "First Name",
       "lastName": "Last Name",
       "email": "Email",

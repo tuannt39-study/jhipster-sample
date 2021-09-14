@@ -16,16 +16,16 @@
 logging:
   level:
     ROOT: DEBUG
-    io.github.jhipster: DEBUG
+    tech.jhipster: DEBUG
+    org.hibernate.SQL: DEBUG
     vn.sapo: DEBUG
 
+management:
+  health:
+    elasticsearch:
+      enabled: false
+
 spring:
-  profiles:
-    active: dev
-    include:
-      - swagger
-      # Uncomment to activate TLS for the dev profile
-      #- tls
   devtools:
     restart:
       enabled: true
@@ -37,27 +37,22 @@ spring:
       indent-output: true
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
-    url: jdbc:h2:file:./target/h2db/db/jdemo;DB_CLOSE_DELAY=-1
-    username: jdemo
+    url: jdbc:h2:file:./target/h2db/db/go;DB_CLOSE_DELAY=-1
+    username: go
     password:
     hikari:
       poolName: Hikari
       auto-commit: false
   h2:
     console:
+      # disable spring boot built-in h2-console since we start it manually with correct configuration
       enabled: false
   jpa:
-    show-sql: true
-    properties:
-      hibernate.id.new_generator_mappings: true
-      hibernate.connection.provider_disables_autocommit: true
-      hibernate.cache.use_second_level_cache: true
-      hibernate.cache.use_query_cache: false
-      hibernate.generate_statistics: false
-      hibernate.cache.region.factory_class: com.hazelcast.hibernate.HazelcastCacheRegionFactory
-      hibernate.cache.hazelcast.instance_name: jdemo
-      hibernate.cache.use_minimal_puts: true
-      hibernate.cache.hazelcast.use_lite_member: true
+    database-platform: tech.jhipster.domain.util.FixedH2Dialect
+  data:
+  elasticsearch:
+    rest:
+      uris: http://localhost:9200
   liquibase:
     # Remove 'faker' if you do not want the sample data to be loaded automatically
     contexts: dev, faker
@@ -85,32 +80,25 @@ jhipster:
     hazelcast: # Hazelcast distributed cache
       time-to-live-seconds: 3600
       backup-count: 1
-      management-center: # Full reference is available at: http://docs.hazelcast.org/docs/management-center/3.9/manual/html/Deploying_and_Starting.html
-        enabled: false
-        update-interval: 3
-        url: http://localhost:8180/hazelcast-mancenter
-  # CORS is only enabled by default with the "dev" profile, so BrowserSync can access the API
+  # CORS is only enabled by default with the "dev" profile
   cors:
-    allowed-origins: '*'
+    # Allow Ionic for JHipster by default (* no longer allowed in Spring Boot 2.4+)
+    allowed-origins: 'http://localhost:8100,http://localhost:9000,http://localhost:9060'
     allowed-methods: '*'
     allowed-headers: '*'
-    exposed-headers: 'Authorization,Link,X-Total-Count'
+    exposed-headers: 'Authorization,Link,X-Total-Count,X-${jhipster.clientApp.name}-alert,X-${jhipster.clientApp.name}-error,X-${jhipster.clientApp.name}-params'
     allow-credentials: true
     max-age: 1800
   security:
     authentication:
       jwt:
         # This token must be encoded using Base64 and be at least 256 bits long (you can type `openssl rand -base64 64` on your command line to generate a 512 bits one)
-        base64-secret: MjIzNDVkZjQ5ODJmMGUwNTZlYzIyMWFjZDA0MThmMTc4MjUzOWNkY2Y4MzY0MDFiMmJiODMzN2E0ODAxZjYzZGMxMTQyNjFkNjI3OTc1YTg2MTMxYjc3NDgyNTAzZDFmMDZmMGRiNmRhZWU4Njk2NmU4YTgyYjc2YmRhNTY5Yjg=
+        base64-secret: NzU1OGE0MmQ1YThiMGM5YTRhZmEyNzE1Zjg5ZmU1YTYwMjVhYjA0ZDU3MWY1NmY0M2U5NjYxZWY4ZThmMzhiYjkwM2JjMWNmNzk1ZjAxYzkwNzUzM2VhOTVmZjllMzY0Mzc0MDI1ZjhhNmQwZGU4ZmVlOThjY2E1MWIyMDJiMDE=
         # Token is valid 24 hours
         token-validity-in-seconds: 86400
         token-validity-in-seconds-for-remember-me: 2592000
   mail: # specific JHipster mail property, for standard properties see MailProperties
     base-url: http://127.0.0.1:8080
-  metrics:
-    logs: # Reports metrics in the logs
-      enabled: false
-      report-frequency: 60 # in seconds
   logging:
     use-json-format: false # By default, logs are not in Json format
     logstash: # Forward logs to logstash over a socket, used by LoggingConfiguration
@@ -118,9 +106,6 @@ jhipster:
       host: localhost
       port: 5000
       queue-size: 512
-  audit-events:
-    retention-period: 30 # Number of days before audit events are deleted.
-
 # ===================================================================
 # Application specific properties
 # Add your own application properties here, see the ApplicationProperties class

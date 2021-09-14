@@ -11,12 +11,12 @@ import LocationDeleteDialog from './location-delete-dialog';
 const Routes = ({ match }) => (
   <>
     <Switch>
-      <ErrorBoundaryRoute exact path={`${match.url}/:id/delete`} component={LocationDeleteDialog} />
       <ErrorBoundaryRoute exact path={`${match.url}/new`} component={LocationUpdate} />
       <ErrorBoundaryRoute exact path={`${match.url}/:id/edit`} component={LocationUpdate} />
       <ErrorBoundaryRoute exact path={`${match.url}/:id`} component={LocationDetail} />
       <ErrorBoundaryRoute path={match.url} component={Location} />
     </Switch>
+    <ErrorBoundaryRoute exact path={`${match.url}/:id/delete`} component={LocationDeleteDialog} />
   </>
 );
 

@@ -1,10 +1,12 @@
 {
-  "jdemoApp": {
+  "goApp": {
     "task": {
       "home": {
         "title": "Tasks",
+        "refreshListLabel": "Refresh list",
         "createLabel": "Create a new Task",
         "createOrEditLabel": "Create or edit a Task",
+        "search": "Search for Task",
         "notFound": "No Tasks found"
       },
       "created": "A new Task is created with identifier {{ param }}",
@@ -16,6 +18,7 @@
       "detail": {
         "title": "Task"
       },
+      "id": "ID",
       "title": "Title",
       "description": "Description",
       "job": "Job"

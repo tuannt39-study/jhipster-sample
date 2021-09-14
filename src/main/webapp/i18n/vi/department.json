@@ -1,10 +1,12 @@
 {
-  "jdemoApp": {
+  "goApp": {
     "department": {
       "home": {
         "title": "Departments",
+        "refreshListLabel": "Refresh list",
         "createLabel": "Thêm mới một Department",
         "createOrEditLabel": "Thêm mới hoặc cập nhật Department",
+        "search": "Tìm Department",
         "notFound": "No Departments found"
       },
       "created": "Một Department mới được tạo với định danh {{ param }}",
@@ -16,6 +18,7 @@
       "detail": {
         "title": "Department"
       },
+      "id": "ID",
       "departmentName": "Department Name",
       "location": "Location",
       "employee": "Employee"

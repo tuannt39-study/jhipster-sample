@@ -1,143 +1,127 @@
 import axios from 'axios';
-import { ICrudGetAction, ICrudGetAllAction, ICrudPutAction, ICrudDeleteAction } from 'react-jhipster';
+import { createAsyncThunk, isFulfilled, isPending, isRejected } from '@reduxjs/toolkit';
 
 import { cleanEntity } from 'app/shared/util/entity-utils';
-import { REQUEST, SUCCESS, FAILURE } from 'app/shared/reducers/action-type.util';
-
+import { IQueryParams, createEntitySlice, EntityState, serializeAxiosError } from 'app/shared/reducers/reducer.utils';
 import { ILocation, defaultValue } from 'app/shared/model/location.model';
 
-export const ACTION_TYPES = {
-  FETCH_LOCATION_LIST: 'location/FETCH_LOCATION_LIST',
-  FETCH_LOCATION: 'location/FETCH_LOCATION',
-  CREATE_LOCATION: 'location/CREATE_LOCATION',
-  UPDATE_LOCATION: 'location/UPDATE_LOCATION',
-  DELETE_LOCATION: 'location/DELETE_LOCATION',
-  RESET: 'location/RESET'
-};
-
-const initialState = {
+const initialState: EntityState<ILocation> = {
   loading: false,
   errorMessage: null,
-  entities: [] as ReadonlyArray<ILocation>,
+  entities: [],
   entity: defaultValue,
   updating: false,
-  updateSuccess: false
-};
-
-export type LocationState = Readonly<typeof initialState>;
-
-// Reducer
-
-export default (state: LocationState = initialState, action): LocationState => {
-  switch (action.type) {
-    case REQUEST(ACTION_TYPES.FETCH_LOCATION_LIST):
-    case REQUEST(ACTION_TYPES.FETCH_LOCATION):
-      return {
-        ...state,
-        errorMessage: null,
-        updateSuccess: false,
-        loading: true
-      };
-    case REQUEST(ACTION_TYPES.CREATE_LOCATION):
-    case REQUEST(ACTION_TYPES.UPDATE_LOCATION):
-    case REQUEST(ACTION_TYPES.DELETE_LOCATION):
-      return {
-        ...state,
-        errorMessage: null,
-        updateSuccess: false,
-        updating: true
-      };
-    case FAILURE(ACTION_TYPES.FETCH_LOCATION_LIST):
-    case FAILURE(ACTION_TYPES.FETCH_LOCATION):
-    case FAILURE(ACTION_TYPES.CREATE_LOCATION):
-    case FAILURE(ACTION_TYPES.UPDATE_LOCATION):
-    case FAILURE(ACTION_TYPES.DELETE_LOCATION):
-      return {
-        ...state,
-        loading: false,
-        updating: false,
-        updateSuccess: false,
-        errorMessage: action.payload
-      };
-    case SUCCESS(ACTION_TYPES.FETCH_LOCATION_LIST):
-      return {
-        ...state,
-        loading: false,
-        entities: action.payload.data
-      };
-    case SUCCESS(ACTION_TYPES.FETCH_LOCATION):
-      return {
-        ...state,
-        loading: false,
-        entity: action.payload.data
-      };
-    case SUCCESS(ACTION_TYPES.CREATE_LOCATION):
-    case SUCCESS(ACTION_TYPES.UPDATE_LOCATION):
-      return {
-        ...state,
-        updating: false,
-        updateSuccess: true,
-        entity: action.payload.data
-      };
-    case SUCCESS(ACTION_TYPES.DELETE_LOCATION):
-      return {
-        ...state,
-        updating: false,
-        updateSuccess: true,
-        entity: {}
-      };
-    case ACTION_TYPES.RESET:
-      return {
-        ...initialState
-      };
-    default:
-      return state;
-  }
+  updateSuccess: false,
 };
 
 const apiUrl = 'api/locations';
+const apiSearchUrl = 'api/_search/locations';
 
 // Actions
 
-export const getEntities: ICrudGetAllAction<ILocation> = (page, size, sort) => ({
-  type: ACTION_TYPES.FETCH_LOCATION_LIST,
-  payload: axios.get<ILocation>(`${apiUrl}?cacheBuster=${new Date().getTime()}`)
+export const searchEntities = createAsyncThunk('location/search_entity', async ({ query, page, size, sort }: IQueryParams) => {
+  const requestUrl = `${apiSearchUrl}?query=${query}`;
+  return axios.get<ILocation[]>(requestUrl);
 });
 
-export const getEntity: ICrudGetAction<ILocation> = id => {
-  const requestUrl = `${apiUrl}/${id}`;
-  return {
-    type: ACTION_TYPES.FETCH_LOCATION,
-    payload: axios.get<ILocation>(requestUrl)
-  };
-};
-
-export const createEntity: ICrudPutAction<ILocation> = entity => async dispatch => {
-  const result = await dispatch({
-    type: ACTION_TYPES.CREATE_LOCATION,
-    payload: axios.post(apiUrl, cleanEntity(entity))
-  });
-  dispatch(getEntities());
-  return result;
-};
-
-export const updateEntity: ICrudPutAction<ILocation> = entity => async dispatch => {
-  const result = await dispatch({
-    type: ACTION_TYPES.UPDATE_LOCATION,
-    payload: axios.put(apiUrl, cleanEntity(entity))
-  });
-  return result;
-};
-
-export const deleteEntity: ICrudDeleteAction<ILocation> = id => async dispatch => {
-  const requestUrl = `${apiUrl}/${id}`;
-  const result = await dispatch({
-    type: ACTION_TYPES.DELETE_LOCATION,
-    payload: axios.delete(requestUrl)
-  });
-  return result;
-};
-
-export const reset = () => ({
-  type: ACTION_TYPES.RESET
+export const getEntities = createAsyncThunk('location/fetch_entity_list', async ({ page, size, sort }: IQueryParams) => {
+  const requestUrl = `${apiUrl}?cacheBuster=${new Date().getTime()}`;
+  return axios.get<ILocation[]>(requestUrl);
 });
+
+export const getEntity = createAsyncThunk(
+  'location/fetch_entity',
+  async (id: string | number) => {
+    const requestUrl = `${apiUrl}/${id}`;
+    return axios.get<ILocation>(requestUrl);
+  },
+  { serializeError: serializeAxiosError }
+);
+
+export const createEntity = createAsyncThunk(
+  'location/create_entity',
+  async (entity: ILocation, thunkAPI) => {
+    const result = await axios.post<ILocation>(apiUrl, cleanEntity(entity));
+    thunkAPI.dispatch(getEntities({}));
+    return result;
+  },
+  { serializeError: serializeAxiosError }
+);
+
+export const updateEntity = createAsyncThunk(
+  'location/update_entity',
+  async (entity: ILocation, thunkAPI) => {
+    const result = await axios.put<ILocation>(`${apiUrl}/${entity.id}`, cleanEntity(entity));
+    thunkAPI.dispatch(getEntities({}));
+    return result;
+  },
+  { serializeError: serializeAxiosError }
+);
+
+export const partialUpdateEntity = createAsyncThunk(
+  'location/partial_update_entity',
+  async (entity: ILocation, thunkAPI) => {
+    const result = await axios.patch<ILocation>(`${apiUrl}/${entity.id}`, cleanEntity(entity));
+    thunkAPI.dispatch(getEntities({}));
+    return result;
+  },
+  { serializeError: serializeAxiosError }
+);
+
+export const deleteEntity = createAsyncThunk(
+  'location/delete_entity',
+  async (id: string | number, thunkAPI) => {
+    const requestUrl = `${apiUrl}/${id}`;
+    const result = await axios.delete<ILocation>(requestUrl);
+    thunkAPI.dispatch(getEntities({}));
+    return result;
+  },
+  { serializeError: serializeAxiosError }
+);
+
+// slice
+
+export const LocationSlice = createEntitySlice({
+  name: 'location',
+  initialState,
+  extraReducers(builder) {
+    builder
+      .addCase(getEntity.fulfilled, (state, action) => {
+        state.loading = false;
+        state.entity = action.payload.data;
+      })
+      .addCase(deleteEntity.fulfilled, state => {
+        state.updating = false;
+        state.updateSuccess = true;
+        state.entity = {};
+      })
+      .addMatcher(isFulfilled(getEntities, searchEntities), (state, action) => {
+        return {
+          ...state,
+          loading: false,
+          entities: action.payload.data,
+        };
+      })
+      .addMatcher(isFulfilled(createEntity, updateEntity, partialUpdateEntity), (state, action) => {
+        state.updating = false;
+        state.loading = false;
+        state.updateSuccess = true;
+        state.entity = action.payload.data;
+      })
+      .addMatcher(isPending(getEntities, getEntity, searchEntities), state => {
+        state.errorMessage = null;
+        state.updateSuccess = false;
+        state.loading = true;
+      })
+      .addMatcher(isPending(createEntity, updateEntity, partialUpdateEntity, deleteEntity), state => {
+        state.errorMessage = null;
+        state.updateSuccess = false;
+        state.updating = true;
+      });
+  },
+});
+
+export const { reset } = LocationSlice.actions;
+
+// Reducer
+export default LocationSlice.reducer;

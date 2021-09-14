@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { connect } from 'react-redux';
 import { Link, RouteComponentProps } from 'react-router-dom';
-import { Button, Row, Col, Label } from 'reactstrap';
-import { AvFeedback, AvForm, AvGroup, AvInput, AvField } from 'availity-reactstrap-validation';
-import { Translate, translate, ICrudGetAction, ICrudGetAllAction, ICrudPutAction } from 'react-jhipster';
+import { Button, Row, Col, FormText } from 'reactstrap';
+import { isNumber, Translate, translate, ValidatedField, ValidatedForm } from 'react-jhipster';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { IRootState } from 'app/shared/reducers';
 
 import { ILocation } from 'app/shared/model/location.model';
 import { getEntities as getLocations } from 'app/entities/location/location.reducer';
@@ -13,14 +10,18 @@ import { getEntity, updateEntity, createEntity, reset } from './department.reduc
 import { IDepartment } from 'app/shared/model/department.model';
 import { convertDateTimeFromServer, convertDateTimeToServer, displayDefaultDateTime } from 'app/shared/util/date-utils';
 import { mapIdList } from 'app/shared/util/entity-utils';
+import { useAppDispatch, useAppSelector } from 'app/config/store';
 
-export interface IDepartmentUpdateProps extends StateProps, DispatchProps, RouteComponentProps<{ id: string }> {}
+export const DepartmentUpdate = (props: RouteComponentProps<{ id: string }>) => {
+  const dispatch = useAppDispatch();
 
-export const DepartmentUpdate = (props: IDepartmentUpdateProps) => {
-  const [locationId, setLocationId] = useState('0');
-  const [isNew, setIsNew] = useState(!props.match.params || !props.match.params.id);
+  const [isNew] = useState(!props.match.params || !props.match.params.id);
 
-  const { departmentEntity, locations, loading, updating } = props;
+  const locations = useAppSelector(state => state.location.entities);
+  const departmentEntity = useAppSelector(state => state.department.entity);
+  const loading = useAppSelector(state => state.department.loading);
+  const updating = useAppSelector(state => state.department.updating);
+  const updateSuccess = useAppSelector(state => state.department.updateSuccess);
 
   const handleClose = () => {
     props.history.push('/department');
@@ -28,41 +29,48 @@ export const DepartmentUpdate = (props: IDepartmentUpdateProps) => {
 
   useEffect(() => {
     if (isNew) {
-      props.reset();
+      dispatch(reset());
     } else {
-      props.getEntity(props.match.params.id);
+      dispatch(getEntity(props.match.params.id));
     }
 
-    props.getLocations();
+    dispatch(getLocations({}));
   }, []);
 
   useEffect(() => {
-    if (props.updateSuccess) {
+    if (updateSuccess) {
       handleClose();
     }
-  }, [props.updateSuccess]);
+  }, [updateSuccess]);
 
-  const saveEntity = (event, errors, values) => {
-    if (errors.length === 0) {
-      const entity = {
-        ...departmentEntity,
-        ...values
-      };
+  const saveEntity = values => {
+    const entity = {
+      ...departmentEntity,
+      ...values,
+      location: locations.find(it => it.id.toString() === values.locationId.toString()),
+    };
 
-      if (isNew) {
-        props.createEntity(entity);
-      } else {
-        props.updateEntity(entity);
-      }
+    if (isNew) {
+      dispatch(createEntity(entity));
+    } else {
+      dispatch(updateEntity(entity));
     }
   };
+
+  const defaultValues = () =>
+    isNew
+      ? {}
+      : {
+          ...departmentEntity,
+          locationId: departmentEntity?.location?.id,
+        };
 
   return (
     <div>
       <Row className="justify-content-center">
         <Col md="8">
-          <h2 id="jdemoApp.department.home.createOrEditLabel">
-            <Translate contentKey="jdemoApp.department.home.createOrEditLabel">Create or edit a Department</Translate>
+          <h2 id="goApp.department.home.createOrEditLabel" data-cy="DepartmentCreateUpdateHeading">
+            <Translate contentKey="goApp.department.home.createOrEditLabel">Create or edit a Department</Translate>
           </h2>
         </Col>
       </Row>
@@ -71,44 +79,44 @@ export const DepartmentUpdate = (props: IDepartmentUpdateProps) => {
           {loading ? (
             <p>Loading...</p>
           ) : (
-            <AvForm model={isNew ? {} : departmentEntity} onSubmit={saveEntity}>
+            <ValidatedForm defaultValues={defaultValues()} onSubmit={saveEntity}>
               {!isNew ? (
-                <AvGroup>
-                  <Label for="department-id">
-                    <Translate contentKey="global.field.id">ID</Translate>
-                  </Label>
-                  <AvInput id="department-id" type="text" className="form-control" name="id" required readOnly />
-                </AvGroup>
-              ) : null}
-              <AvGroup>
-                <Label id="departmentNameLabel" for="department-departmentName">
-                  <Translate contentKey="jdemoApp.department.departmentName">Department Name</Translate>
-                </Label>
-                <AvField
-                  id="department-departmentName"
-                  type="text"
-                  name="departmentName"
-                  validate={{
-                    required: { value: true, errorMessage: translate('entity.validation.required') }
-                  }}
+                <ValidatedField
+                  name="id"
+                  required
+                  readOnly
+                  id="department-id"
+                  label={translate('global.field.id')}
+                  validate={{ required: true }}
                 />
-              </AvGroup>
-              <AvGroup>
-                <Label for="department-location">
-                  <Translate contentKey="jdemoApp.department.location">Location</Translate>
-                </Label>
-                <AvInput id="department-location" type="select" className="form-control" name="location.id">
-                  <option value="" key="0" />
-                  {locations
-                    ? locations.map(otherEntity => (
-                        <option value={otherEntity.id} key={otherEntity.id}>
-                          {otherEntity.id}
-                        </option>
-                      ))
-                    : null}
-                </AvInput>
-              </AvGroup>
-              <Button tag={Link} id="cancel-save" to="/department" replace color="info">
+              ) : null}
+              <ValidatedField
+                label={translate('goApp.department.departmentName')}
+                id="department-departmentName"
+                name="departmentName"
+                data-cy="departmentName"
+                type="text"
+                validate={{
+                  required: { value: true, message: translate('entity.validation.required') },
+                }}
+              />
+              <ValidatedField
+                id="department-location"
+                name="locationId"
+                data-cy="location"
+                label={translate('goApp.department.location')}
+                type="select"
+              >
+                <option value="" key="0" />
+                {locations
+                  ? locations.map(otherEntity => (
+                      <option value={otherEntity.id} key={otherEntity.id}>
+                        {otherEntity.id}
+                      </option>
+                    ))
+                  : null}
+              </ValidatedField>
+              <Button tag={Link} id="cancel-save" data-cy="entityCreateCancelButton" to="/department" replace color="info">
                 <FontAwesomeIcon icon="arrow-left" />
                 &nbsp;
                 <span className="d-none d-md-inline">
@@ -116,12 +124,12 @@ export const DepartmentUpdate = (props: IDepartmentUpdateProps) => {
                 </span>
               </Button>
               &nbsp;
-              <Button color="primary" id="save-entity" type="submit" disabled={updating}>
+              <Button color="primary" id="save-entity" data-cy="entityCreateSaveButton" type="submit" disabled={updating}>
                 <FontAwesomeIcon icon="save" />
                 &nbsp;
                 <Translate contentKey="entity.action.save">Save</Translate>
               </Button>
-            </AvForm>
+            </ValidatedForm>
           )}
         </Col>
       </Row>
@@ -129,23 +137,4 @@ export const DepartmentUpdate = (props: IDepartmentUpdateProps) => {
   );
 };
 
-const mapStateToProps = (storeState: IRootState) => ({
-  locations: storeState.location.entities,
-  departmentEntity: storeState.department.entity,
-  loading: storeState.department.loading,
-  updating: storeState.department.updating,
-  updateSuccess: storeState.department.updateSuccess
-});
-
-const mapDispatchToProps = {
-  getLocations,
-  getEntity,
-  updateEntity,
-  createEntity,
-  reset
-};
-
-type StateProps = ReturnType<typeof mapStateToProps>;
-type DispatchProps = typeof mapDispatchToProps;
-
-export default connect(mapStateToProps, mapDispatchToProps)(DepartmentUpdate);
+export default DepartmentUpdate;

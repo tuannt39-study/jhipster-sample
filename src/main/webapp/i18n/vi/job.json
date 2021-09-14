@@ -1,10 +1,12 @@
 {
-  "jdemoApp": {
+  "goApp": {
     "job": {
       "home": {
         "title": "Jobs",
+        "refreshListLabel": "Refresh list",
         "createLabel": "Thêm mới một Job",
         "createOrEditLabel": "Thêm mới hoặc cập nhật Job",
+        "search": "Tìm Job",
         "notFound": "No Jobs found"
       },
       "created": "Một Job mới được tạo với định danh {{ param }}",
@@ -16,6 +18,7 @@
       "detail": {
         "title": "Job"
       },
+      "id": "ID",
       "jobTitle": "Job Title",
       "minSalary": "Min Salary",
       "maxSalary": "Max Salary",

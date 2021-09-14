@@ -1,16 +1,22 @@
 package vn.sapo.service.impl;
 
-import vn.sapo.service.DepartmentService;
-import vn.sapo.domain.Department;
-import vn.sapo.repository.DepartmentRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static org.elasticsearch.index.query.QueryBuilders.*;
 
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import vn.sapo.domain.Department;
+import vn.sapo.repository.DepartmentRepository;
+import vn.sapo.repository.search.DepartmentSearchRepository;
+import vn.sapo.service.DepartmentService;
+import vn.sapo.service.dto.DepartmentDTO;
+import vn.sapo.service.mapper.DepartmentMapper;
 
 /**
  * Service Implementation for managing {@link Department}.
@@ -23,55 +29,82 @@ public class DepartmentServiceImpl implements DepartmentService {
 
     private final DepartmentRepository departmentRepository;
 
-    public DepartmentServiceImpl(DepartmentRepository departmentRepository) {
+    private final DepartmentMapper departmentMapper;
+
+    private final DepartmentSearchRepository departmentSearchRepository;
+
+    public DepartmentServiceImpl(
+        DepartmentRepository departmentRepository,
+        DepartmentMapper departmentMapper,
+        DepartmentSearchRepository departmentSearchRepository
+    ) {
         this.departmentRepository = departmentRepository;
+        this.departmentMapper = departmentMapper;
+        this.departmentSearchRepository = departmentSearchRepository;
     }
 
-    /**
-     * Save a department.
-     *
-     * @param department the entity to save.
-     * @return the persisted entity.
-     */
     @Override
-    public Department save(Department department) {
-        log.debug("Request to save Department : {}", department);
-        return departmentRepository.save(department);
+    public DepartmentDTO save(DepartmentDTO departmentDTO) {
+        log.debug("Request to save Department : {}", departmentDTO);
+        Department department = departmentMapper.toEntity(departmentDTO);
+        department = departmentRepository.save(department);
+        DepartmentDTO result = departmentMapper.toDto(department);
+        departmentSearchRepository.save(department);
+        return result;
     }
 
-    /**
-     * Get all the departments.
-     *
-     * @return the list of entities.
-     */
+    @Override
+    public Optional<DepartmentDTO> partialUpdate(DepartmentDTO departmentDTO) {
+        log.debug("Request to partially update Department : {}", departmentDTO);
+
+        return departmentRepository
+            .findById(departmentDTO.getId())
+            .map(
+                existingDepartment -> {
+                    departmentMapper.partialUpdate(existingDepartment, departmentDTO);
+
+                    return existingDepartment;
+                }
+            )
+            .map(departmentRepository::save)
+            .map(
+                savedDepartment -> {
+                    departmentSearchRepository.save(savedDepartment);
+
+                    return savedDepartment;
+                }
+            )
+            .map(departmentMapper::toDto);
+    }
+
     @Override
     @Transactional(readOnly = true)
-    public List<Department> findAll() {
+    public List<DepartmentDTO> findAll() {
         log.debug("Request to get all Departments");
-        return departmentRepository.findAll();
+        return departmentRepository.findAll().stream().map(departmentMapper::toDto).collect(Collectors.toCollection(LinkedList::new));
     }
 
-    /**
-     * Get one department by id.
-     *
-     * @param id the id of the entity.
-     * @return the entity.
-     */
     @Override
     @Transactional(readOnly = true)
-    public Optional<Department> findOne(Long id) {
+    public Optional<DepartmentDTO> findOne(Long id) {
         log.debug("Request to get Department : {}", id);
-        return departmentRepository.findById(id);
+        return departmentRepository.findById(id).map(departmentMapper::toDto);
     }
 
-    /**
-     * Delete the department by id.
-     *
-     * @param id the id of the entity.
-     */
     @Override
     public void delete(Long id) {
         log.debug("Request to delete Department : {}", id);
         departmentRepository.deleteById(id);
+        departmentSearchRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DepartmentDTO> search(String query) {
+        log.debug("Request to search Departments for query {}", query);
+        return StreamSupport
+            .stream(departmentSearchRepository.search(queryStringQuery(query)).spliterator(), false)
+            .map(departmentMapper::toDto)
+            .collect(Collectors.toList());
     }
 }

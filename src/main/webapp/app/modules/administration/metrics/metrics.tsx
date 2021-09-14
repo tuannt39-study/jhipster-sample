@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { connect } from 'react-redux';
-import { Button, Col, Progress, Row, Table } from 'reactstrap';
+import React, { useEffect } from 'react';
+import { Button, Col, Row } from 'reactstrap';
 import {
   CacheMetrics,
   DatasourceMetrics,
@@ -10,36 +9,37 @@ import {
   JvmThreads,
   EndpointsRequestsMetrics,
   SystemMetrics,
-  Translate
+  Translate,
 } from 'react-jhipster';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import { APP_TIMESTAMP_FORMAT, APP_TWO_DIGITS_AFTER_POINT_NUMBER_FORMAT, APP_WHOLE_NUMBER_FORMAT } from 'app/config/constants';
-import { systemMetrics, systemThreadDump } from '../administration.reducer';
-import { IRootState } from 'app/shared/reducers';
+import { getSystemMetrics, getSystemThreadDump } from '../administration.reducer';
+import { useAppDispatch, useAppSelector } from 'app/config/store';
 
-export interface IMetricsPageProps extends StateProps, DispatchProps {}
-
-export const MetricsPage = (props: IMetricsPageProps) => {
-  const [showModal, setShowModal] = useState(false);
+export const MetricsPage = () => {
+  const dispatch = useAppDispatch();
+  const metrics = useAppSelector(state => state.administration.metrics);
+  const isFetching = useAppSelector(state => state.administration.loading);
+  const threadDump = useAppSelector(state => state.administration.threadDump);
 
   useEffect(() => {
-    props.systemMetrics();
-    props.systemThreadDump();
+    dispatch(getSystemMetrics());
+    dispatch(getSystemThreadDump());
   }, []);
 
   const getMetrics = () => {
-    if (!props.isFetching) {
-      props.systemMetrics();
-      props.systemThreadDump();
+    if (!isFetching) {
+      dispatch(getSystemMetrics());
+      dispatch(getSystemThreadDump());
     }
   };
 
-  const { metrics, threadDump, isFetching } = props;
-
   return (
     <div>
-      <h2 id="metrics-page-heading">Application Metrics</h2>
+      <h2 id="metrics-page-heading" data-cy="metricsPageHeading">
+        Application Metrics
+      </h2>
       <p>
         <Button onClick={getMetrics} color={isFetching ? 'btn btn-danger' : 'btn btn-primary'} disabled={isFetching}>
           <FontAwesomeIcon icon="sync" />
@@ -117,15 +117,4 @@ export const MetricsPage = (props: IMetricsPageProps) => {
   );
 };
 
-const mapStateToProps = (storeState: IRootState) => ({
-  metrics: storeState.administration.metrics,
-  isFetching: storeState.administration.loading,
-  threadDump: storeState.administration.threadDump
-});
-
-const mapDispatchToProps = { systemMetrics, systemThreadDump };
-
-type StateProps = ReturnType<typeof mapStateToProps>;
-type DispatchProps = typeof mapDispatchToProps;
-
-export default connect(mapStateToProps, mapDispatchToProps)(MetricsPage);
+export default MetricsPage;

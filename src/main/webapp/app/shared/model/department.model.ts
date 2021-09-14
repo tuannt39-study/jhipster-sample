@@ -4,8 +4,8 @@ import { IEmployee } from 'app/shared/model/employee.model';
 export interface IDepartment {
   id?: number;
   departmentName?: string;
-  location?: ILocation;
-  employees?: IEmployee[];
+  location?: ILocation | null;
+  employees?: IEmployee[] | null;
 }
 
 export const defaultValue: Readonly<IDepartment> = {};

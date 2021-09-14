@@ -1,143 +1,127 @@
 import axios from 'axios';
-import { ICrudGetAction, ICrudGetAllAction, ICrudPutAction, ICrudDeleteAction } from 'react-jhipster';
+import { createAsyncThunk, isFulfilled, isPending, isRejected } from '@reduxjs/toolkit';
 
 import { cleanEntity } from 'app/shared/util/entity-utils';
-import { REQUEST, SUCCESS, FAILURE } from 'app/shared/reducers/action-type.util';
-
+import { IQueryParams, createEntitySlice, EntityState, serializeAxiosError } from 'app/shared/reducers/reducer.utils';
 import { IDepartment, defaultValue } from 'app/shared/model/department.model';
 
-export const ACTION_TYPES = {
-  FETCH_DEPARTMENT_LIST: 'department/FETCH_DEPARTMENT_LIST',
-  FETCH_DEPARTMENT: 'department/FETCH_DEPARTMENT',
-  CREATE_DEPARTMENT: 'department/CREATE_DEPARTMENT',
-  UPDATE_DEPARTMENT: 'department/UPDATE_DEPARTMENT',
-  DELETE_DEPARTMENT: 'department/DELETE_DEPARTMENT',
-  RESET: 'department/RESET'
-};
-
-const initialState = {
+const initialState: EntityState<IDepartment> = {
   loading: false,
   errorMessage: null,
-  entities: [] as ReadonlyArray<IDepartment>,
+  entities: [],
   entity: defaultValue,
   updating: false,
-  updateSuccess: false
-};
-
-export type DepartmentState = Readonly<typeof initialState>;
-
-// Reducer
-
-export default (state: DepartmentState = initialState, action): DepartmentState => {
-  switch (action.type) {
-    case REQUEST(ACTION_TYPES.FETCH_DEPARTMENT_LIST):
-    case REQUEST(ACTION_TYPES.FETCH_DEPARTMENT):
-      return {
-        ...state,
-        errorMessage: null,
-        updateSuccess: false,
-        loading: true
-      };
-    case REQUEST(ACTION_TYPES.CREATE_DEPARTMENT):
-    case REQUEST(ACTION_TYPES.UPDATE_DEPARTMENT):
-    case REQUEST(ACTION_TYPES.DELETE_DEPARTMENT):
-      return {
-        ...state,
-        errorMessage: null,
-        updateSuccess: false,
-        updating: true
-      };
-    case FAILURE(ACTION_TYPES.FETCH_DEPARTMENT_LIST):
-    case FAILURE(ACTION_TYPES.FETCH_DEPARTMENT):
-    case FAILURE(ACTION_TYPES.CREATE_DEPARTMENT):
-    case FAILURE(ACTION_TYPES.UPDATE_DEPARTMENT):
-    case FAILURE(ACTION_TYPES.DELETE_DEPARTMENT):
-      return {
-        ...state,
-        loading: false,
-        updating: false,
-        updateSuccess: false,
-        errorMessage: action.payload
-      };
-    case SUCCESS(ACTION_TYPES.FETCH_DEPARTMENT_LIST):
-      return {
-        ...state,
-        loading: false,
-        entities: action.payload.data
-      };
-    case SUCCESS(ACTION_TYPES.FETCH_DEPARTMENT):
-      return {
-        ...state,
-        loading: false,
-        entity: action.payload.data
-      };
-    case SUCCESS(ACTION_TYPES.CREATE_DEPARTMENT):
-    case SUCCESS(ACTION_TYPES.UPDATE_DEPARTMENT):
-      return {
-        ...state,
-        updating: false,
-        updateSuccess: true,
-        entity: action.payload.data
-      };
-    case SUCCESS(ACTION_TYPES.DELETE_DEPARTMENT):
-      return {
-        ...state,
-        updating: false,
-        updateSuccess: true,
-        entity: {}
-      };
-    case ACTION_TYPES.RESET:
-      return {
-        ...initialState
-      };
-    default:
-      return state;
-  }
+  updateSuccess: false,
 };
 
 const apiUrl = 'api/departments';
+const apiSearchUrl = 'api/_search/departments';
 
 // Actions
 
-export const getEntities: ICrudGetAllAction<IDepartment> = (page, size, sort) => ({
-  type: ACTION_TYPES.FETCH_DEPARTMENT_LIST,
-  payload: axios.get<IDepartment>(`${apiUrl}?cacheBuster=${new Date().getTime()}`)
+export const searchEntities = createAsyncThunk('department/search_entity', async ({ query, page, size, sort }: IQueryParams) => {
+  const requestUrl = `${apiSearchUrl}?query=${query}`;
+  return axios.get<IDepartment[]>(requestUrl);
 });
 
-export const getEntity: ICrudGetAction<IDepartment> = id => {
-  const requestUrl = `${apiUrl}/${id}`;
-  return {
-    type: ACTION_TYPES.FETCH_DEPARTMENT,
-    payload: axios.get<IDepartment>(requestUrl)
-  };
-};
-
-export const createEntity: ICrudPutAction<IDepartment> = entity => async dispatch => {
-  const result = await dispatch({
-    type: ACTION_TYPES.CREATE_DEPARTMENT,
-    payload: axios.post(apiUrl, cleanEntity(entity))
-  });
-  dispatch(getEntities());
-  return result;
-};
-
-export const updateEntity: ICrudPutAction<IDepartment> = entity => async dispatch => {
-  const result = await dispatch({
-    type: ACTION_TYPES.UPDATE_DEPARTMENT,
-    payload: axios.put(apiUrl, cleanEntity(entity))
-  });
-  return result;
-};
-
-export const deleteEntity: ICrudDeleteAction<IDepartment> = id => async dispatch => {
-  const requestUrl = `${apiUrl}/${id}`;
-  const result = await dispatch({
-    type: ACTION_TYPES.DELETE_DEPARTMENT,
-    payload: axios.delete(requestUrl)
-  });
-  return result;
-};
-
-export const reset = () => ({
-  type: ACTION_TYPES.RESET
+export const getEntities = createAsyncThunk('department/fetch_entity_list', async ({ page, size, sort }: IQueryParams) => {
+  const requestUrl = `${apiUrl}?cacheBuster=${new Date().getTime()}`;
+  return axios.get<IDepartment[]>(requestUrl);
 });
+
+export const getEntity = createAsyncThunk(
+  'department/fetch_entity',
+  async (id: string | number) => {
+    const requestUrl = `${apiUrl}/${id}`;
+    return axios.get<IDepartment>(requestUrl);
+  },
+  { serializeError: serializeAxiosError }
+);
+
+export const createEntity = createAsyncThunk(
+  'department/create_entity',
+  async (entity: IDepartment, thunkAPI) => {
+    const result = await axios.post<IDepartment>(apiUrl, cleanEntity(entity));
+    thunkAPI.dispatch(getEntities({}));
+    return result;
+  },
+  { serializeError: serializeAxiosError }
+);
+
+export const updateEntity = createAsyncThunk(
+  'department/update_entity',
+  async (entity: IDepartment, thunkAPI) => {
+    const result = await axios.put<IDepartment>(`${apiUrl}/${entity.id}`, cleanEntity(entity));
+    thunkAPI.dispatch(getEntities({}));
+    return result;
+  },
+  { serializeError: serializeAxiosError }
+);
+
+export const partialUpdateEntity = createAsyncThunk(
+  'department/partial_update_entity',
+  async (entity: IDepartment, thunkAPI) => {
+    const result = await axios.patch<IDepartment>(`${apiUrl}/${entity.id}`, cleanEntity(entity));
+    thunkAPI.dispatch(getEntities({}));
+    return result;
+  },
+  { serializeError: serializeAxiosError }
+);
+
+export const deleteEntity = createAsyncThunk(
+  'department/delete_entity',
+  async (id: string | number, thunkAPI) => {
+    const requestUrl = `${apiUrl}/${id}`;
+    const result = await axios.delete<IDepartment>(requestUrl);
+    thunkAPI.dispatch(getEntities({}));
+    return result;
+  },
+  { serializeError: serializeAxiosError }
+);
+
+// slice
+
+export const DepartmentSlice = createEntitySlice({
+  name: 'department',
+  initialState,
+  extraReducers(builder) {
+    builder
+      .addCase(getEntity.fulfilled, (state, action) => {
+        state.loading = false;
+        state.entity = action.payload.data;
+      })
+      .addCase(deleteEntity.fulfilled, state => {
+        state.updating = false;
+        state.updateSuccess = true;
+        state.entity = {};
+      })
+      .addMatcher(isFulfilled(getEntities, searchEntities), (state, action) => {
+        return {
+          ...state,
+          loading: false,
+          entities: action.payload.data,
+        };
+      })
+      .addMatcher(isFulfilled(createEntity, updateEntity, partialUpdateEntity), (state, action) => {
+        state.updating = false;
+        state.loading = false;
+        state.updateSuccess = true;
+        state.entity = action.payload.data;
+      })
+      .addMatcher(isPending(getEntities, getEntity, searchEntities), state => {
+        state.errorMessage = null;
+        state.updateSuccess = false;
+        state.loading = true;
+      })
+      .addMatcher(isPending(createEntity, updateEntity, partialUpdateEntity, deleteEntity), state => {
+        state.errorMessage = null;
+        state.updateSuccess = false;
+        state.updating = true;
+      });
+  },
+});
+
+export const { reset } = DepartmentSlice.actions;
+
+// Reducer
+export default DepartmentSlice.reducer;

@@ -1,10 +1,12 @@
 {
-  "jdemoApp": {
+  "goApp": {
     "employee": {
       "home": {
         "title": "Employees",
+        "refreshListLabel": "Refresh list",
         "createLabel": "Create a new Employee",
         "createOrEditLabel": "Create or edit a Employee",
+        "search": "Search for Employee",
         "notFound": "No Employees found"
       },
       "created": "A new Employee is created with identifier {{ param }}",
@@ -16,6 +18,7 @@
       "detail": {
         "title": "Employee"
       },
+      "id": "ID",
       "firstName": "First Name",
       "lastName": "Last Name",
       "email": "Email",

@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { connect } from 'react-redux';
 import { Link, RouteComponentProps } from 'react-router-dom';
-import { Button, Row, Col, Label } from 'reactstrap';
-import { AvFeedback, AvForm, AvGroup, AvInput, AvField } from 'availity-reactstrap-validation';
-import { Translate, translate, ICrudGetAction, ICrudGetAllAction, ICrudPutAction } from 'react-jhipster';
+import { Button, Row, Col, FormText } from 'reactstrap';
+import { isNumber, Translate, translate, ValidatedField, ValidatedForm } from 'react-jhipster';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { IRootState } from 'app/shared/reducers';
 
 import { IJob } from 'app/shared/model/job.model';
 import { getEntities as getJobs } from 'app/entities/job/job.reducer';
@@ -17,16 +14,20 @@ import { getEntity, updateEntity, createEntity, reset } from './job-history.redu
 import { IJobHistory } from 'app/shared/model/job-history.model';
 import { convertDateTimeFromServer, convertDateTimeToServer, displayDefaultDateTime } from 'app/shared/util/date-utils';
 import { mapIdList } from 'app/shared/util/entity-utils';
+import { useAppDispatch, useAppSelector } from 'app/config/store';
 
-export interface IJobHistoryUpdateProps extends StateProps, DispatchProps, RouteComponentProps<{ id: string }> {}
+export const JobHistoryUpdate = (props: RouteComponentProps<{ id: string }>) => {
+  const dispatch = useAppDispatch();
 
-export const JobHistoryUpdate = (props: IJobHistoryUpdateProps) => {
-  const [jobId, setJobId] = useState('0');
-  const [departmentId, setDepartmentId] = useState('0');
-  const [employeeId, setEmployeeId] = useState('0');
-  const [isNew, setIsNew] = useState(!props.match.params || !props.match.params.id);
+  const [isNew] = useState(!props.match.params || !props.match.params.id);
 
-  const { jobHistoryEntity, jobs, departments, employees, loading, updating } = props;
+  const jobs = useAppSelector(state => state.job.entities);
+  const departments = useAppSelector(state => state.department.entities);
+  const employees = useAppSelector(state => state.employee.entities);
+  const jobHistoryEntity = useAppSelector(state => state.jobHistory.entity);
+  const loading = useAppSelector(state => state.jobHistory.loading);
+  const updating = useAppSelector(state => state.jobHistory.updating);
+  const updateSuccess = useAppSelector(state => state.jobHistory.updateSuccess);
 
   const handleClose = () => {
     props.history.push('/job-history');
@@ -34,44 +35,61 @@ export const JobHistoryUpdate = (props: IJobHistoryUpdateProps) => {
 
   useEffect(() => {
     if (!isNew) {
-      props.getEntity(props.match.params.id);
+      dispatch(getEntity(props.match.params.id));
     }
 
-    props.getJobs();
-    props.getDepartments();
-    props.getEmployees();
+    dispatch(getJobs({}));
+    dispatch(getDepartments({}));
+    dispatch(getEmployees({}));
   }, []);
 
   useEffect(() => {
-    if (props.updateSuccess) {
+    if (updateSuccess) {
       handleClose();
     }
-  }, [props.updateSuccess]);
+  }, [updateSuccess]);
 
-  const saveEntity = (event, errors, values) => {
+  const saveEntity = values => {
     values.startDate = convertDateTimeToServer(values.startDate);
     values.endDate = convertDateTimeToServer(values.endDate);
 
-    if (errors.length === 0) {
-      const entity = {
-        ...jobHistoryEntity,
-        ...values
-      };
+    const entity = {
+      ...jobHistoryEntity,
+      ...values,
+      job: jobs.find(it => it.id.toString() === values.jobId.toString()),
+      department: departments.find(it => it.id.toString() === values.departmentId.toString()),
+      employee: employees.find(it => it.id.toString() === values.employeeId.toString()),
+    };
 
-      if (isNew) {
-        props.createEntity(entity);
-      } else {
-        props.updateEntity(entity);
-      }
+    if (isNew) {
+      dispatch(createEntity(entity));
+    } else {
+      dispatch(updateEntity(entity));
     }
   };
+
+  const defaultValues = () =>
+    isNew
+      ? {
+          startDate: displayDefaultDateTime(),
+          endDate: displayDefaultDateTime(),
+        }
+      : {
+          ...jobHistoryEntity,
+          startDate: convertDateTimeFromServer(jobHistoryEntity.startDate),
+          endDate: convertDateTimeFromServer(jobHistoryEntity.endDate),
+          language: 'FRENCH',
+          jobId: jobHistoryEntity?.job?.id,
+          departmentId: jobHistoryEntity?.department?.id,
+          employeeId: jobHistoryEntity?.employee?.id,
+        };
 
   return (
     <div>
       <Row className="justify-content-center">
         <Col md="8">
-          <h2 id="jdemoApp.jobHistory.home.createOrEditLabel">
-            <Translate contentKey="jdemoApp.jobHistory.home.createOrEditLabel">Create or edit a JobHistory</Translate>
+          <h2 id="goApp.jobHistory.home.createOrEditLabel" data-cy="JobHistoryCreateUpdateHeading">
+            <Translate contentKey="goApp.jobHistory.home.createOrEditLabel">Create or edit a JobHistory</Translate>
           </h2>
         </Col>
       </Row>
@@ -80,103 +98,87 @@ export const JobHistoryUpdate = (props: IJobHistoryUpdateProps) => {
           {loading ? (
             <p>Loading...</p>
           ) : (
-            <AvForm model={isNew ? {} : jobHistoryEntity} onSubmit={saveEntity}>
+            <ValidatedForm defaultValues={defaultValues()} onSubmit={saveEntity}>
               {!isNew ? (
-                <AvGroup>
-                  <Label for="job-history-id">
-                    <Translate contentKey="global.field.id">ID</Translate>
-                  </Label>
-                  <AvInput id="job-history-id" type="text" className="form-control" name="id" required readOnly />
-                </AvGroup>
+                <ValidatedField
+                  name="id"
+                  required
+                  readOnly
+                  id="job-history-id"
+                  label={translate('global.field.id')}
+                  validate={{ required: true }}
+                />
               ) : null}
-              <AvGroup>
-                <Label id="startDateLabel" for="job-history-startDate">
-                  <Translate contentKey="jdemoApp.jobHistory.startDate">Start Date</Translate>
-                </Label>
-                <AvInput
-                  id="job-history-startDate"
-                  type="datetime-local"
-                  className="form-control"
-                  name="startDate"
-                  placeholder={'YYYY-MM-DD HH:mm'}
-                  value={isNew ? displayDefaultDateTime() : convertDateTimeFromServer(props.jobHistoryEntity.startDate)}
-                />
-              </AvGroup>
-              <AvGroup>
-                <Label id="endDateLabel" for="job-history-endDate">
-                  <Translate contentKey="jdemoApp.jobHistory.endDate">End Date</Translate>
-                </Label>
-                <AvInput
-                  id="job-history-endDate"
-                  type="datetime-local"
-                  className="form-control"
-                  name="endDate"
-                  placeholder={'YYYY-MM-DD HH:mm'}
-                  value={isNew ? displayDefaultDateTime() : convertDateTimeFromServer(props.jobHistoryEntity.endDate)}
-                />
-              </AvGroup>
-              <AvGroup>
-                <Label id="languageLabel" for="job-history-language">
-                  <Translate contentKey="jdemoApp.jobHistory.language">Language</Translate>
-                </Label>
-                <AvInput
-                  id="job-history-language"
-                  type="select"
-                  className="form-control"
-                  name="language"
-                  value={(!isNew && jobHistoryEntity.language) || 'FRENCH'}
-                >
-                  <option value="FRENCH">{translate('jdemoApp.Language.FRENCH')}</option>
-                  <option value="ENGLISH">{translate('jdemoApp.Language.ENGLISH')}</option>
-                  <option value="SPANISH">{translate('jdemoApp.Language.SPANISH')}</option>
-                </AvInput>
-              </AvGroup>
-              <AvGroup>
-                <Label for="job-history-job">
-                  <Translate contentKey="jdemoApp.jobHistory.job">Job</Translate>
-                </Label>
-                <AvInput id="job-history-job" type="select" className="form-control" name="job.id">
-                  <option value="" key="0" />
-                  {jobs
-                    ? jobs.map(otherEntity => (
-                        <option value={otherEntity.id} key={otherEntity.id}>
-                          {otherEntity.id}
-                        </option>
-                      ))
-                    : null}
-                </AvInput>
-              </AvGroup>
-              <AvGroup>
-                <Label for="job-history-department">
-                  <Translate contentKey="jdemoApp.jobHistory.department">Department</Translate>
-                </Label>
-                <AvInput id="job-history-department" type="select" className="form-control" name="department.id">
-                  <option value="" key="0" />
-                  {departments
-                    ? departments.map(otherEntity => (
-                        <option value={otherEntity.id} key={otherEntity.id}>
-                          {otherEntity.id}
-                        </option>
-                      ))
-                    : null}
-                </AvInput>
-              </AvGroup>
-              <AvGroup>
-                <Label for="job-history-employee">
-                  <Translate contentKey="jdemoApp.jobHistory.employee">Employee</Translate>
-                </Label>
-                <AvInput id="job-history-employee" type="select" className="form-control" name="employee.id">
-                  <option value="" key="0" />
-                  {employees
-                    ? employees.map(otherEntity => (
-                        <option value={otherEntity.id} key={otherEntity.id}>
-                          {otherEntity.id}
-                        </option>
-                      ))
-                    : null}
-                </AvInput>
-              </AvGroup>
-              <Button tag={Link} id="cancel-save" to="/job-history" replace color="info">
+              <ValidatedField
+                label={translate('goApp.jobHistory.startDate')}
+                id="job-history-startDate"
+                name="startDate"
+                data-cy="startDate"
+                type="datetime-local"
+                placeholder="YYYY-MM-DD HH:mm"
+              />
+              <ValidatedField
+                label={translate('goApp.jobHistory.endDate')}
+                id="job-history-endDate"
+                name="endDate"
+                data-cy="endDate"
+                type="datetime-local"
+                placeholder="YYYY-MM-DD HH:mm"
+              />
+              <ValidatedField
+                label={translate('goApp.jobHistory.language')}
+                id="job-history-language"
+                name="language"
+                data-cy="language"
+                type="select"
+              >
+                <option value="FRENCH">{translate('goApp.Language.FRENCH')}</option>
+                <option value="ENGLISH">{translate('goApp.Language.ENGLISH')}</option>
+                <option value="SPANISH">{translate('goApp.Language.SPANISH')}</option>
+              </ValidatedField>
+              <ValidatedField id="job-history-job" name="jobId" data-cy="job" label={translate('goApp.jobHistory.job')} type="select">
+                <option value="" key="0" />
+                {jobs
+                  ? jobs.map(otherEntity => (
+                      <option value={otherEntity.id} key={otherEntity.id}>
+                        {otherEntity.id}
+                      </option>
+                    ))
+                  : null}
+              </ValidatedField>
+              <ValidatedField
+                id="job-history-department"
+                name="departmentId"
+                data-cy="department"
+                label={translate('goApp.jobHistory.department')}
+                type="select"
+              >
+                <option value="" key="0" />
+                {departments
+                  ? departments.map(otherEntity => (
+                      <option value={otherEntity.id} key={otherEntity.id}>
+                        {otherEntity.id}
+                      </option>
+                    ))
+                  : null}
+              </ValidatedField>
+              <ValidatedField
+                id="job-history-employee"
+                name="employeeId"
+                data-cy="employee"
+                label={translate('goApp.jobHistory.employee')}
+                type="select"
+              >
+                <option value="" key="0" />
+                {employees
+                  ? employees.map(otherEntity => (
+                      <option value={otherEntity.id} key={otherEntity.id}>
+                        {otherEntity.id}
+                      </option>
+                    ))
+                  : null}
+              </ValidatedField>
+              <Button tag={Link} id="cancel-save" data-cy="entityCreateCancelButton" to="/job-history" replace color="info">
                 <FontAwesomeIcon icon="arrow-left" />
                 &nbsp;
                 <span className="d-none d-md-inline">
@@ -184,12 +186,12 @@ export const JobHistoryUpdate = (props: IJobHistoryUpdateProps) => {
                 </span>
               </Button>
               &nbsp;
-              <Button color="primary" id="save-entity" type="submit" disabled={updating}>
+              <Button color="primary" id="save-entity" data-cy="entityCreateSaveButton" type="submit" disabled={updating}>
                 <FontAwesomeIcon icon="save" />
                 &nbsp;
                 <Translate contentKey="entity.action.save">Save</Translate>
               </Button>
-            </AvForm>
+            </ValidatedForm>
           )}
         </Col>
       </Row>
@@ -197,27 +199,4 @@ export const JobHistoryUpdate = (props: IJobHistoryUpdateProps) => {
   );
 };
 
-const mapStateToProps = (storeState: IRootState) => ({
-  jobs: storeState.job.entities,
-  departments: storeState.department.entities,
-  employees: storeState.employee.entities,
-  jobHistoryEntity: storeState.jobHistory.entity,
-  loading: storeState.jobHistory.loading,
-  updating: storeState.jobHistory.updating,
-  updateSuccess: storeState.jobHistory.updateSuccess
-});
-
-const mapDispatchToProps = {
-  getJobs,
-  getDepartments,
-  getEmployees,
-  getEntity,
-  updateEntity,
-  createEntity,
-  reset
-};
-
-type StateProps = ReturnType<typeof mapStateToProps>;
-type DispatchProps = typeof mapDispatchToProps;
-
-export default connect(mapStateToProps, mapDispatchToProps)(JobHistoryUpdate);
+export default JobHistoryUpdate;

@@ -1,40 +1,37 @@
 {
-    "name": "Department",
-    "fields": [
-        {
-            "fieldName": "departmentName",
-            "fieldType": "String",
-            "fieldValidateRules": [
-                "required"
-            ]
-        }
-    ],
-    "relationships": [
-        {
-            "relationshipType": "one-to-one",
-            "otherEntityName": "location",
-            "otherEntityRelationshipName": "department",
-            "relationshipName": "location",
-            "otherEntityField": "id",
-            "ownerSide": true
-        },
-        {
-            "relationshipType": "one-to-many",
-            "otherEntityName": "employee",
-            "otherEntityRelationshipName": "department",
-            "javadoc": "A relationship",
-            "relationshipName": "employee"
-        }
-    ],
-    "changelogDate": "20200418184100",
-    "entityTableName": "department",
-    "dto": "no",
-    "pagination": "no",
-    "service": "serviceImpl",
-    "jpaMetamodelFiltering": false,
-    "fluentMethods": true,
-    "readOnly": false,
-    "embedded": false,
-    "clientRootFolder": "",
-    "applications": "*"
+  "name": "Department",
+  "fields": [
+    {
+      "fieldName": "departmentName",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    }
+  ],
+  "relationships": [
+    {
+      "relationshipType": "one-to-one",
+      "otherEntityName": "location",
+      "otherEntityRelationshipName": "department",
+      "relationshipName": "location",
+      "ownerSide": true
+    },
+    {
+      "relationshipType": "one-to-many",
+      "otherEntityName": "employee",
+      "otherEntityRelationshipName": "department",
+      "javadoc": "A relationship",
+      "relationshipName": "employee"
+    }
+  ],
+  "entityTableName": "department",
+  "dto": "mapstruct",
+  "pagination": "no",
+  "service": "serviceImpl",
+  "jpaMetamodelFiltering": true,
+  "fluentMethods": true,
+  "readOnly": false,
+  "embedded": false,
+  "applications": "*",
+  "searchEngine": "elasticsearch",
+  "changelogDate": "20210914051552"
 }

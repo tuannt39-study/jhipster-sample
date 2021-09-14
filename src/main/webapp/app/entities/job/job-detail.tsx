@@ -1,67 +1,71 @@
 import React, { useEffect } from 'react';
-import { connect } from 'react-redux';
 import { Link, RouteComponentProps } from 'react-router-dom';
 import { Button, Row, Col } from 'reactstrap';
-import { Translate, ICrudGetAction } from 'react-jhipster';
+import { Translate } from 'react-jhipster';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
-import { IRootState } from 'app/shared/reducers';
 import { getEntity } from './job.reducer';
-import { IJob } from 'app/shared/model/job.model';
 import { APP_DATE_FORMAT, APP_LOCAL_DATE_FORMAT } from 'app/config/constants';
+import { useAppDispatch, useAppSelector } from 'app/config/store';
 
-export interface IJobDetailProps extends StateProps, DispatchProps, RouteComponentProps<{ id: string }> {}
+export const JobDetail = (props: RouteComponentProps<{ id: string }>) => {
+  const dispatch = useAppDispatch();
 
-export const JobDetail = (props: IJobDetailProps) => {
   useEffect(() => {
-    props.getEntity(props.match.params.id);
+    dispatch(getEntity(props.match.params.id));
   }, []);
 
-  const { jobEntity } = props;
+  const jobEntity = useAppSelector(state => state.job.entity);
   return (
     <Row>
       <Col md="8">
-        <h2>
-          <Translate contentKey="jdemoApp.job.detail.title">Job</Translate> [<b>{jobEntity.id}</b>]
+        <h2 data-cy="jobDetailsHeading">
+          <Translate contentKey="goApp.job.detail.title">Job</Translate>
         </h2>
         <dl className="jh-entity-details">
           <dt>
+            <span id="id">
+              <Translate contentKey="global.field.id">ID</Translate>
+            </span>
+          </dt>
+          <dd>{jobEntity.id}</dd>
+          <dt>
             <span id="jobTitle">
-              <Translate contentKey="jdemoApp.job.jobTitle">Job Title</Translate>
+              <Translate contentKey="goApp.job.jobTitle">Job Title</Translate>
             </span>
           </dt>
           <dd>{jobEntity.jobTitle}</dd>
           <dt>
             <span id="minSalary">
-              <Translate contentKey="jdemoApp.job.minSalary">Min Salary</Translate>
+              <Translate contentKey="goApp.job.minSalary">Min Salary</Translate>
             </span>
           </dt>
           <dd>{jobEntity.minSalary}</dd>
           <dt>
             <span id="maxSalary">
-              <Translate contentKey="jdemoApp.job.maxSalary">Max Salary</Translate>
+              <Translate contentKey="goApp.job.maxSalary">Max Salary</Translate>
             </span>
           </dt>
           <dd>{jobEntity.maxSalary}</dd>
           <dt>
-            <Translate contentKey="jdemoApp.job.task">Task</Translate>
+            <Translate contentKey="goApp.job.task">Task</Translate>
           </dt>
           <dd>
             {jobEntity.tasks
               ? jobEntity.tasks.map((val, i) => (
                   <span key={val.id}>
                     <a>{val.title}</a>
-                    {i === jobEntity.tasks.length - 1 ? '' : ', '}
+                    {jobEntity.tasks && i === jobEntity.tasks.length - 1 ? '' : ', '}
                   </span>
                 ))
               : null}
           </dd>
           <dt>
-            <Translate contentKey="jdemoApp.job.employee">Employee</Translate>
+            <Translate contentKey="goApp.job.employee">Employee</Translate>
           </dt>
           <dd>{jobEntity.employee ? jobEntity.employee.id : ''}</dd>
         </dl>
-        <Button tag={Link} to="/job" replace color="info">
+        <Button tag={Link} to="/job" replace color="info" data-cy="entityDetailsBackButton">
           <FontAwesomeIcon icon="arrow-left" />{' '}
           <span className="d-none d-md-inline">
             <Translate contentKey="entity.action.back">Back</Translate>
@@ -79,13 +83,4 @@ export const JobDetail = (props: IJobDetailProps) => {
   );
 };
 
-const mapStateToProps = ({ job }: IRootState) => ({
-  jobEntity: job.entity
-});
-
-const mapDispatchToProps = { getEntity };
-
-type StateProps = ReturnType<typeof mapStateToProps>;
-type DispatchProps = typeof mapDispatchToProps;
-
-export default connect(mapStateToProps, mapDispatchToProps)(JobDetail);
+export default JobDetail;

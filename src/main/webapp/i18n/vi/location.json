@@ -1,10 +1,12 @@
 {
-  "jdemoApp": {
+  "goApp": {
     "location": {
       "home": {
         "title": "Locations",
+        "refreshListLabel": "Refresh list",
         "createLabel": "Thêm mới một Location",
         "createOrEditLabel": "Thêm mới hoặc cập nhật Location",
+        "search": "Tìm Location",
         "notFound": "No Locations found"
       },
       "created": "Một Location mới được tạo với định danh {{ param }}",
@@ -16,6 +18,7 @@
       "detail": {
         "title": "Location"
       },
+      "id": "ID",
       "streetAddress": "Street Address",
       "postalCode": "Postal Code",
       "city": "City",

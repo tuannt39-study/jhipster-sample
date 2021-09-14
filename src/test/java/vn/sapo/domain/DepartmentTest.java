@@ -1,13 +1,14 @@
 package vn.sapo.domain;
 
-import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
 import vn.sapo.web.rest.TestUtil;
 
-public class DepartmentTest {
+class DepartmentTest {
 
     @Test
-    public void equalsVerifier() throws Exception {
+    void equalsVerifier() throws Exception {
         TestUtil.equalsVerifier(Department.class);
         Department department1 = new Department();
         department1.setId(1L);

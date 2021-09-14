@@ -11,9 +11,14 @@
       "error": "Lỗi"
     },
     "indicator": {
+      "binders": "Truyền tải tin nhắn",
+      "hazelcast": "Hazelcast",
       "diskSpace": "Dung lượng trống",
       "mail": "Email",
+      "livenessState": "Liveness state",
+      "readinessState": "Readiness state",
       "ping": "Application",
+      "elasticsearch": "Elasticsearch",
       "db": "Cơ sở dữ liệu"
     },
     "table": {

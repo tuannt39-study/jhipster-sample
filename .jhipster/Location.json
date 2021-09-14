@@ -1,43 +1,42 @@
 {
-    "name": "Location",
-    "fields": [
-        {
-            "fieldName": "streetAddress",
-            "fieldType": "String"
-        },
-        {
-            "fieldName": "postalCode",
-            "fieldType": "String"
-        },
-        {
-            "fieldName": "city",
-            "fieldType": "String"
-        },
-        {
-            "fieldName": "stateProvince",
-            "fieldType": "String"
-        }
-    ],
-    "relationships": [
-        {
-            "relationshipType": "one-to-one",
-            "otherEntityName": "country",
-            "otherEntityRelationshipName": "location",
-            "relationshipName": "country",
-            "otherEntityField": "id",
-            "ownerSide": true
-        }
-    ],
-    "changelogDate": "20200418184000",
-    "javadoc": "not an ignored comment",
-    "entityTableName": "location",
-    "dto": "no",
-    "pagination": "no",
-    "service": "serviceImpl",
-    "jpaMetamodelFiltering": false,
-    "fluentMethods": true,
-    "readOnly": false,
-    "embedded": false,
-    "clientRootFolder": "",
-    "applications": "*"
+  "name": "Location",
+  "fields": [
+    {
+      "fieldName": "streetAddress",
+      "fieldType": "String"
+    },
+    {
+      "fieldName": "postalCode",
+      "fieldType": "String"
+    },
+    {
+      "fieldName": "city",
+      "fieldType": "String"
+    },
+    {
+      "fieldName": "stateProvince",
+      "fieldType": "String"
+    }
+  ],
+  "relationships": [
+    {
+      "relationshipType": "one-to-one",
+      "otherEntityName": "country",
+      "otherEntityRelationshipName": "location",
+      "relationshipName": "country",
+      "ownerSide": true
+    }
+  ],
+  "javadoc": "not an ignored comment",
+  "entityTableName": "location",
+  "dto": "mapstruct",
+  "pagination": "no",
+  "service": "serviceImpl",
+  "jpaMetamodelFiltering": true,
+  "fluentMethods": true,
+  "readOnly": false,
+  "embedded": false,
+  "applications": "*",
+  "searchEngine": "elasticsearch",
+  "changelogDate": "20210914051551"
 }

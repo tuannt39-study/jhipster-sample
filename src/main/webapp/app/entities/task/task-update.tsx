@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { connect } from 'react-redux';
 import { Link, RouteComponentProps } from 'react-router-dom';
-import { Button, Row, Col, Label } from 'reactstrap';
-import { AvFeedback, AvForm, AvGroup, AvInput, AvField } from 'availity-reactstrap-validation';
-import { Translate, translate, ICrudGetAction, ICrudGetAllAction, ICrudPutAction } from 'react-jhipster';
+import { Button, Row, Col, FormText } from 'reactstrap';
+import { isNumber, Translate, translate, ValidatedField, ValidatedForm } from 'react-jhipster';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { IRootState } from 'app/shared/reducers';
 
 import { IJob } from 'app/shared/model/job.model';
 import { getEntities as getJobs } from 'app/entities/job/job.reducer';
@@ -13,14 +10,18 @@ import { getEntity, updateEntity, createEntity, reset } from './task.reducer';
 import { ITask } from 'app/shared/model/task.model';
 import { convertDateTimeFromServer, convertDateTimeToServer, displayDefaultDateTime } from 'app/shared/util/date-utils';
 import { mapIdList } from 'app/shared/util/entity-utils';
+import { useAppDispatch, useAppSelector } from 'app/config/store';
 
-export interface ITaskUpdateProps extends StateProps, DispatchProps, RouteComponentProps<{ id: string }> {}
+export const TaskUpdate = (props: RouteComponentProps<{ id: string }>) => {
+  const dispatch = useAppDispatch();
 
-export const TaskUpdate = (props: ITaskUpdateProps) => {
-  const [jobId, setJobId] = useState('0');
-  const [isNew, setIsNew] = useState(!props.match.params || !props.match.params.id);
+  const [isNew] = useState(!props.match.params || !props.match.params.id);
 
-  const { taskEntity, jobs, loading, updating } = props;
+  const jobs = useAppSelector(state => state.job.entities);
+  const taskEntity = useAppSelector(state => state.task.entity);
+  const loading = useAppSelector(state => state.task.loading);
+  const updating = useAppSelector(state => state.task.updating);
+  const updateSuccess = useAppSelector(state => state.task.updateSuccess);
 
   const handleClose = () => {
     props.history.push('/task');
@@ -28,41 +29,46 @@ export const TaskUpdate = (props: ITaskUpdateProps) => {
 
   useEffect(() => {
     if (isNew) {
-      props.reset();
+      dispatch(reset());
     } else {
-      props.getEntity(props.match.params.id);
+      dispatch(getEntity(props.match.params.id));
     }
 
-    props.getJobs();
+    dispatch(getJobs({}));
   }, []);
 
   useEffect(() => {
-    if (props.updateSuccess) {
+    if (updateSuccess) {
       handleClose();
     }
-  }, [props.updateSuccess]);
+  }, [updateSuccess]);
 
-  const saveEntity = (event, errors, values) => {
-    if (errors.length === 0) {
-      const entity = {
-        ...taskEntity,
-        ...values
-      };
+  const saveEntity = values => {
+    const entity = {
+      ...taskEntity,
+      ...values,
+    };
 
-      if (isNew) {
-        props.createEntity(entity);
-      } else {
-        props.updateEntity(entity);
-      }
+    if (isNew) {
+      dispatch(createEntity(entity));
+    } else {
+      dispatch(updateEntity(entity));
     }
   };
+
+  const defaultValues = () =>
+    isNew
+      ? {}
+      : {
+          ...taskEntity,
+        };
 
   return (
     <div>
       <Row className="justify-content-center">
         <Col md="8">
-          <h2 id="jdemoApp.task.home.createOrEditLabel">
-            <Translate contentKey="jdemoApp.task.home.createOrEditLabel">Create or edit a Task</Translate>
+          <h2 id="goApp.task.home.createOrEditLabel" data-cy="TaskCreateUpdateHeading">
+            <Translate contentKey="goApp.task.home.createOrEditLabel">Create or edit a Task</Translate>
           </h2>
         </Col>
       </Row>
@@ -71,28 +77,26 @@ export const TaskUpdate = (props: ITaskUpdateProps) => {
           {loading ? (
             <p>Loading...</p>
           ) : (
-            <AvForm model={isNew ? {} : taskEntity} onSubmit={saveEntity}>
+            <ValidatedForm defaultValues={defaultValues()} onSubmit={saveEntity}>
               {!isNew ? (
-                <AvGroup>
-                  <Label for="task-id">
-                    <Translate contentKey="global.field.id">ID</Translate>
-                  </Label>
-                  <AvInput id="task-id" type="text" className="form-control" name="id" required readOnly />
-                </AvGroup>
+                <ValidatedField
+                  name="id"
+                  required
+                  readOnly
+                  id="task-id"
+                  label={translate('global.field.id')}
+                  validate={{ required: true }}
+                />
               ) : null}
-              <AvGroup>
-                <Label id="titleLabel" for="task-title">
-                  <Translate contentKey="jdemoApp.task.title">Title</Translate>
-                </Label>
-                <AvField id="task-title" type="text" name="title" />
-              </AvGroup>
-              <AvGroup>
-                <Label id="descriptionLabel" for="task-description">
-                  <Translate contentKey="jdemoApp.task.description">Description</Translate>
-                </Label>
-                <AvField id="task-description" type="text" name="description" />
-              </AvGroup>
-              <Button tag={Link} id="cancel-save" to="/task" replace color="info">
+              <ValidatedField label={translate('goApp.task.title')} id="task-title" name="title" data-cy="title" type="text" />
+              <ValidatedField
+                label={translate('goApp.task.description')}
+                id="task-description"
+                name="description"
+                data-cy="description"
+                type="text"
+              />
+              <Button tag={Link} id="cancel-save" data-cy="entityCreateCancelButton" to="/task" replace color="info">
                 <FontAwesomeIcon icon="arrow-left" />
                 &nbsp;
                 <span className="d-none d-md-inline">
@@ -100,12 +104,12 @@ export const TaskUpdate = (props: ITaskUpdateProps) => {
                 </span>
               </Button>
               &nbsp;
-              <Button color="primary" id="save-entity" type="submit" disabled={updating}>
+              <Button color="primary" id="save-entity" data-cy="entityCreateSaveButton" type="submit" disabled={updating}>
                 <FontAwesomeIcon icon="save" />
                 &nbsp;
                 <Translate contentKey="entity.action.save">Save</Translate>
               </Button>
-            </AvForm>
+            </ValidatedForm>
           )}
         </Col>
       </Row>
@@ -113,23 +117,4 @@ export const TaskUpdate = (props: ITaskUpdateProps) => {
   );
 };
 
-const mapStateToProps = (storeState: IRootState) => ({
-  jobs: storeState.job.entities,
-  taskEntity: storeState.task.entity,
-  loading: storeState.task.loading,
-  updating: storeState.task.updating,
-  updateSuccess: storeState.task.updateSuccess
-});
-
-const mapDispatchToProps = {
-  getJobs,
-  getEntity,
-  updateEntity,
-  createEntity,
-  reset
-};
-
-type StateProps = ReturnType<typeof mapStateToProps>;
-type DispatchProps = typeof mapDispatchToProps;
-
-export default connect(mapStateToProps, mapDispatchToProps)(TaskUpdate);
+export default TaskUpdate;

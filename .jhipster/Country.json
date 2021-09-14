@@ -1,30 +1,29 @@
 {
-    "name": "Country",
-    "fields": [
-        {
-            "fieldName": "countryName",
-            "fieldType": "String"
-        }
-    ],
-    "relationships": [
-        {
-            "relationshipType": "one-to-one",
-            "otherEntityName": "region",
-            "otherEntityRelationshipName": "country",
-            "relationshipName": "region",
-            "otherEntityField": "id",
-            "ownerSide": true
-        }
-    ],
-    "changelogDate": "20200418183900",
-    "entityTableName": "country",
-    "dto": "no",
-    "pagination": "no",
-    "service": "serviceImpl",
-    "jpaMetamodelFiltering": false,
-    "fluentMethods": true,
-    "readOnly": false,
-    "embedded": false,
-    "clientRootFolder": "",
-    "applications": "*"
+  "name": "Country",
+  "fields": [
+    {
+      "fieldName": "countryName",
+      "fieldType": "String"
+    }
+  ],
+  "relationships": [
+    {
+      "relationshipType": "one-to-one",
+      "otherEntityName": "region",
+      "otherEntityRelationshipName": "country",
+      "relationshipName": "region",
+      "ownerSide": true
+    }
+  ],
+  "entityTableName": "country",
+  "dto": "mapstruct",
+  "pagination": "no",
+  "service": "serviceImpl",
+  "jpaMetamodelFiltering": true,
+  "fluentMethods": true,
+  "readOnly": false,
+  "embedded": false,
+  "applications": "*",
+  "searchEngine": "elasticsearch",
+  "changelogDate": "20210914051550"
 }

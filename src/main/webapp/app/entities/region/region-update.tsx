@@ -1,23 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { connect } from 'react-redux';
 import { Link, RouteComponentProps } from 'react-router-dom';
-import { Button, Row, Col, Label } from 'reactstrap';
-import { AvFeedback, AvForm, AvGroup, AvInput, AvField } from 'availity-reactstrap-validation';
-import { Translate, translate, ICrudGetAction, ICrudGetAllAction, ICrudPutAction } from 'react-jhipster';
+import { Button, Row, Col, FormText } from 'reactstrap';
+import { isNumber, Translate, translate, ValidatedField, ValidatedForm } from 'react-jhipster';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { IRootState } from 'app/shared/reducers';
 
 import { getEntity, updateEntity, createEntity, reset } from './region.reducer';
 import { IRegion } from 'app/shared/model/region.model';
 import { convertDateTimeFromServer, convertDateTimeToServer, displayDefaultDateTime } from 'app/shared/util/date-utils';
 import { mapIdList } from 'app/shared/util/entity-utils';
+import { useAppDispatch, useAppSelector } from 'app/config/store';
 
-export interface IRegionUpdateProps extends StateProps, DispatchProps, RouteComponentProps<{ id: string }> {}
+export const RegionUpdate = (props: RouteComponentProps<{ id: string }>) => {
+  const dispatch = useAppDispatch();
 
-export const RegionUpdate = (props: IRegionUpdateProps) => {
-  const [isNew, setIsNew] = useState(!props.match.params || !props.match.params.id);
+  const [isNew] = useState(!props.match.params || !props.match.params.id);
 
-  const { regionEntity, loading, updating } = props;
+  const regionEntity = useAppSelector(state => state.region.entity);
+  const loading = useAppSelector(state => state.region.loading);
+  const updating = useAppSelector(state => state.region.updating);
+  const updateSuccess = useAppSelector(state => state.region.updateSuccess);
 
   const handleClose = () => {
     props.history.push('/region');
@@ -25,39 +26,44 @@ export const RegionUpdate = (props: IRegionUpdateProps) => {
 
   useEffect(() => {
     if (isNew) {
-      props.reset();
+      dispatch(reset());
     } else {
-      props.getEntity(props.match.params.id);
+      dispatch(getEntity(props.match.params.id));
     }
   }, []);
 
   useEffect(() => {
-    if (props.updateSuccess) {
+    if (updateSuccess) {
       handleClose();
     }
-  }, [props.updateSuccess]);
+  }, [updateSuccess]);
 
-  const saveEntity = (event, errors, values) => {
-    if (errors.length === 0) {
-      const entity = {
-        ...regionEntity,
-        ...values
-      };
+  const saveEntity = values => {
+    const entity = {
+      ...regionEntity,
+      ...values,
+    };
 
-      if (isNew) {
-        props.createEntity(entity);
-      } else {
-        props.updateEntity(entity);
-      }
+    if (isNew) {
+      dispatch(createEntity(entity));
+    } else {
+      dispatch(updateEntity(entity));
     }
   };
+
+  const defaultValues = () =>
+    isNew
+      ? {}
+      : {
+          ...regionEntity,
+        };
 
   return (
     <div>
       <Row className="justify-content-center">
         <Col md="8">
-          <h2 id="jdemoApp.region.home.createOrEditLabel">
-            <Translate contentKey="jdemoApp.region.home.createOrEditLabel">Create or edit a Region</Translate>
+          <h2 id="goApp.region.home.createOrEditLabel" data-cy="RegionCreateUpdateHeading">
+            <Translate contentKey="goApp.region.home.createOrEditLabel">Create or edit a Region</Translate>
           </h2>
         </Col>
       </Row>
@@ -66,22 +72,25 @@ export const RegionUpdate = (props: IRegionUpdateProps) => {
           {loading ? (
             <p>Loading...</p>
           ) : (
-            <AvForm model={isNew ? {} : regionEntity} onSubmit={saveEntity}>
+            <ValidatedForm defaultValues={defaultValues()} onSubmit={saveEntity}>
               {!isNew ? (
-                <AvGroup>
-                  <Label for="region-id">
-                    <Translate contentKey="global.field.id">ID</Translate>
-                  </Label>
-                  <AvInput id="region-id" type="text" className="form-control" name="id" required readOnly />
-                </AvGroup>
+                <ValidatedField
+                  name="id"
+                  required
+                  readOnly
+                  id="region-id"
+                  label={translate('global.field.id')}
+                  validate={{ required: true }}
+                />
               ) : null}
-              <AvGroup>
-                <Label id="regionNameLabel" for="region-regionName">
-                  <Translate contentKey="jdemoApp.region.regionName">Region Name</Translate>
-                </Label>
-                <AvField id="region-regionName" type="text" name="regionName" />
-              </AvGroup>
-              <Button tag={Link} id="cancel-save" to="/region" replace color="info">
+              <ValidatedField
+                label={translate('goApp.region.regionName')}
+                id="region-regionName"
+                name="regionName"
+                data-cy="regionName"
+                type="text"
+              />
+              <Button tag={Link} id="cancel-save" data-cy="entityCreateCancelButton" to="/region" replace color="info">
                 <FontAwesomeIcon icon="arrow-left" />
                 &nbsp;
                 <span className="d-none d-md-inline">
@@ -89,12 +98,12 @@ export const RegionUpdate = (props: IRegionUpdateProps) => {
                 </span>
               </Button>
               &nbsp;
-              <Button color="primary" id="save-entity" type="submit" disabled={updating}>
+              <Button color="primary" id="save-entity" data-cy="entityCreateSaveButton" type="submit" disabled={updating}>
                 <FontAwesomeIcon icon="save" />
                 &nbsp;
                 <Translate contentKey="entity.action.save">Save</Translate>
               </Button>
-            </AvForm>
+            </ValidatedForm>
           )}
         </Col>
       </Row>
@@ -102,21 +111,4 @@ export const RegionUpdate = (props: IRegionUpdateProps) => {
   );
 };
 
-const mapStateToProps = (storeState: IRootState) => ({
-  regionEntity: storeState.region.entity,
-  loading: storeState.region.loading,
-  updating: storeState.region.updating,
-  updateSuccess: storeState.region.updateSuccess
-});
-
-const mapDispatchToProps = {
-  getEntity,
-  updateEntity,
-  createEntity,
-  reset
-};
-
-type StateProps = ReturnType<typeof mapStateToProps>;
-type DispatchProps = typeof mapDispatchToProps;
-
-export default connect(mapStateToProps, mapDispatchToProps)(RegionUpdate);
+export default RegionUpdate;

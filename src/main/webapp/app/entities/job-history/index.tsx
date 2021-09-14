@@ -11,12 +11,12 @@ import JobHistoryDeleteDialog from './job-history-delete-dialog';
 const Routes = ({ match }) => (
   <>
     <Switch>
-      <ErrorBoundaryRoute exact path={`${match.url}/:id/delete`} component={JobHistoryDeleteDialog} />
       <ErrorBoundaryRoute exact path={`${match.url}/new`} component={JobHistoryUpdate} />
       <ErrorBoundaryRoute exact path={`${match.url}/:id/edit`} component={JobHistoryUpdate} />
       <ErrorBoundaryRoute exact path={`${match.url}/:id`} component={JobHistoryDetail} />
       <ErrorBoundaryRoute path={match.url} component={JobHistory} />
     </Switch>
+    <ErrorBoundaryRoute exact path={`${match.url}/:id/delete`} component={JobHistoryDeleteDialog} />
   </>
 );
 

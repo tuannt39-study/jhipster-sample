@@ -1,143 +1,127 @@
 import axios from 'axios';
-import { ICrudGetAction, ICrudGetAllAction, ICrudPutAction, ICrudDeleteAction } from 'react-jhipster';
+import { createAsyncThunk, isFulfilled, isPending, isRejected } from '@reduxjs/toolkit';
 
 import { cleanEntity } from 'app/shared/util/entity-utils';
-import { REQUEST, SUCCESS, FAILURE } from 'app/shared/reducers/action-type.util';
-
+import { IQueryParams, createEntitySlice, EntityState, serializeAxiosError } from 'app/shared/reducers/reducer.utils';
 import { ITask, defaultValue } from 'app/shared/model/task.model';
 
-export const ACTION_TYPES = {
-  FETCH_TASK_LIST: 'task/FETCH_TASK_LIST',
-  FETCH_TASK: 'task/FETCH_TASK',
-  CREATE_TASK: 'task/CREATE_TASK',
-  UPDATE_TASK: 'task/UPDATE_TASK',
-  DELETE_TASK: 'task/DELETE_TASK',
-  RESET: 'task/RESET'
-};
-
-const initialState = {
+const initialState: EntityState<ITask> = {
   loading: false,
   errorMessage: null,
-  entities: [] as ReadonlyArray<ITask>,
+  entities: [],
   entity: defaultValue,
   updating: false,
-  updateSuccess: false
-};
-
-export type TaskState = Readonly<typeof initialState>;
-
-// Reducer
-
-export default (state: TaskState = initialState, action): TaskState => {
-  switch (action.type) {
-    case REQUEST(ACTION_TYPES.FETCH_TASK_LIST):
-    case REQUEST(ACTION_TYPES.FETCH_TASK):
-      return {
-        ...state,
-        errorMessage: null,
-        updateSuccess: false,
-        loading: true
-      };
-    case REQUEST(ACTION_TYPES.CREATE_TASK):
-    case REQUEST(ACTION_TYPES.UPDATE_TASK):
-    case REQUEST(ACTION_TYPES.DELETE_TASK):
-      return {
-        ...state,
-        errorMessage: null,
-        updateSuccess: false,
-        updating: true
-      };
-    case FAILURE(ACTION_TYPES.FETCH_TASK_LIST):
-    case FAILURE(ACTION_TYPES.FETCH_TASK):
-    case FAILURE(ACTION_TYPES.CREATE_TASK):
-    case FAILURE(ACTION_TYPES.UPDATE_TASK):
-    case FAILURE(ACTION_TYPES.DELETE_TASK):
-      return {
-        ...state,
-        loading: false,
-        updating: false,
-        updateSuccess: false,
-        errorMessage: action.payload
-      };
-    case SUCCESS(ACTION_TYPES.FETCH_TASK_LIST):
-      return {
-        ...state,
-        loading: false,
-        entities: action.payload.data
-      };
-    case SUCCESS(ACTION_TYPES.FETCH_TASK):
-      return {
-        ...state,
-        loading: false,
-        entity: action.payload.data
-      };
-    case SUCCESS(ACTION_TYPES.CREATE_TASK):
-    case SUCCESS(ACTION_TYPES.UPDATE_TASK):
-      return {
-        ...state,
-        updating: false,
-        updateSuccess: true,
-        entity: action.payload.data
-      };
-    case SUCCESS(ACTION_TYPES.DELETE_TASK):
-      return {
-        ...state,
-        updating: false,
-        updateSuccess: true,
-        entity: {}
-      };
-    case ACTION_TYPES.RESET:
-      return {
-        ...initialState
-      };
-    default:
-      return state;
-  }
+  updateSuccess: false,
 };
 
 const apiUrl = 'api/tasks';
+const apiSearchUrl = 'api/_search/tasks';
 
 // Actions
 
-export const getEntities: ICrudGetAllAction<ITask> = (page, size, sort) => ({
-  type: ACTION_TYPES.FETCH_TASK_LIST,
-  payload: axios.get<ITask>(`${apiUrl}?cacheBuster=${new Date().getTime()}`)
+export const searchEntities = createAsyncThunk('task/search_entity', async ({ query, page, size, sort }: IQueryParams) => {
+  const requestUrl = `${apiSearchUrl}?query=${query}`;
+  return axios.get<ITask[]>(requestUrl);
 });
 
-export const getEntity: ICrudGetAction<ITask> = id => {
-  const requestUrl = `${apiUrl}/${id}`;
-  return {
-    type: ACTION_TYPES.FETCH_TASK,
-    payload: axios.get<ITask>(requestUrl)
-  };
-};
-
-export const createEntity: ICrudPutAction<ITask> = entity => async dispatch => {
-  const result = await dispatch({
-    type: ACTION_TYPES.CREATE_TASK,
-    payload: axios.post(apiUrl, cleanEntity(entity))
-  });
-  dispatch(getEntities());
-  return result;
-};
-
-export const updateEntity: ICrudPutAction<ITask> = entity => async dispatch => {
-  const result = await dispatch({
-    type: ACTION_TYPES.UPDATE_TASK,
-    payload: axios.put(apiUrl, cleanEntity(entity))
-  });
-  return result;
-};
-
-export const deleteEntity: ICrudDeleteAction<ITask> = id => async dispatch => {
-  const requestUrl = `${apiUrl}/${id}`;
-  const result = await dispatch({
-    type: ACTION_TYPES.DELETE_TASK,
-    payload: axios.delete(requestUrl)
-  });
-  return result;
-};
-
-export const reset = () => ({
-  type: ACTION_TYPES.RESET
+export const getEntities = createAsyncThunk('task/fetch_entity_list', async ({ page, size, sort }: IQueryParams) => {
+  const requestUrl = `${apiUrl}?cacheBuster=${new Date().getTime()}`;
+  return axios.get<ITask[]>(requestUrl);
 });
+
+export const getEntity = createAsyncThunk(
+  'task/fetch_entity',
+  async (id: string | number) => {
+    const requestUrl = `${apiUrl}/${id}`;
+    return axios.get<ITask>(requestUrl);
+  },
+  { serializeError: serializeAxiosError }
+);
+
+export const createEntity = createAsyncThunk(
+  'task/create_entity',
+  async (entity: ITask, thunkAPI) => {
+    const result = await axios.post<ITask>(apiUrl, cleanEntity(entity));
+    thunkAPI.dispatch(getEntities({}));
+    return result;
+  },
+  { serializeError: serializeAxiosError }
+);
+
+export const updateEntity = createAsyncThunk(
+  'task/update_entity',
+  async (entity: ITask, thunkAPI) => {
+    const result = await axios.put<ITask>(`${apiUrl}/${entity.id}`, cleanEntity(entity));
+    thunkAPI.dispatch(getEntities({}));
+    return result;
+  },
+  { serializeError: serializeAxiosError }
+);
+
+export const partialUpdateEntity = createAsyncThunk(
+  'task/partial_update_entity',
+  async (entity: ITask, thunkAPI) => {
+    const result = await axios.patch<ITask>(`${apiUrl}/${entity.id}`, cleanEntity(entity));
+    thunkAPI.dispatch(getEntities({}));
+    return result;
+  },
+  { serializeError: serializeAxiosError }
+);
+
+export const deleteEntity = createAsyncThunk(
+  'task/delete_entity',
+  async (id: string | number, thunkAPI) => {
+    const requestUrl = `${apiUrl}/${id}`;
+    const result = await axios.delete<ITask>(requestUrl);
+    thunkAPI.dispatch(getEntities({}));
+    return result;
+  },
+  { serializeError: serializeAxiosError }
+);
+
+// slice
+
+export const TaskSlice = createEntitySlice({
+  name: 'task',
+  initialState,
+  extraReducers(builder) {
+    builder
+      .addCase(getEntity.fulfilled, (state, action) => {
+        state.loading = false;
+        state.entity = action.payload.data;
+      })
+      .addCase(deleteEntity.fulfilled, state => {
+        state.updating = false;
+        state.updateSuccess = true;
+        state.entity = {};
+      })
+      .addMatcher(isFulfilled(getEntities, searchEntities), (state, action) => {
+        return {
+          ...state,
+          loading: false,
+          entities: action.payload.data,
+        };
+      })
+      .addMatcher(isFulfilled(createEntity, updateEntity, partialUpdateEntity), (state, action) => {
+        state.updating = false;
+        state.loading = false;
+        state.updateSuccess = true;
+        state.entity = action.payload.data;
+      })
+      .addMatcher(isPending(getEntities, getEntity, searchEntities), state => {
+        state.errorMessage = null;
+        state.updateSuccess = false;
+        state.loading = true;
+      })
+      .addMatcher(isPending(createEntity, updateEntity, partialUpdateEntity, deleteEntity), state => {
+        state.errorMessage = null;
+        state.updateSuccess = false;
+        state.updating = true;
+      });
+  },
+});
+
+export const { reset } = TaskSlice.actions;
+
+// Reducer
+export default TaskSlice.reducer;

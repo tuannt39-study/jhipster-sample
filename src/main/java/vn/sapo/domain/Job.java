@@ -1,28 +1,25 @@
 package vn.sapo.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
-import javax.persistence.*;
-
 import java.io.Serializable;
-import java.util.Objects;
 import java.util.HashSet;
 import java.util.Set;
+import javax.persistence.*;
+import org.springframework.data.elasticsearch.annotations.FieldType;
 
 /**
  * A Job.
  */
 @Entity
 @Table(name = "job")
-@Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
+@org.springframework.data.elasticsearch.annotations.Document(indexName = "job")
 public class Job implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "sequenceGenerator")
+    @SequenceGenerator(name = "sequenceGenerator")
     private Long id;
 
     @Column(name = "job_title")
@@ -35,17 +32,15 @@ public class Job implements Serializable {
     private Long maxSalary;
 
     @ManyToMany
-    @Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
-    @JoinTable(name = "job_task",
-               joinColumns = @JoinColumn(name = "job_id", referencedColumnName = "id"),
-               inverseJoinColumns = @JoinColumn(name = "task_id", referencedColumnName = "id"))
+    @JoinTable(name = "rel_job__task", joinColumns = @JoinColumn(name = "job_id"), inverseJoinColumns = @JoinColumn(name = "task_id"))
+    @JsonIgnoreProperties(value = { "jobs" }, allowSetters = true)
     private Set<Task> tasks = new HashSet<>();
 
     @ManyToOne
-    @JsonIgnoreProperties("jobs")
+    @JsonIgnoreProperties(value = { "jobs", "manager", "department" }, allowSetters = true)
     private Employee employee;
 
-    // jhipster-needle-entity-add-field - JHipster will add fields here, do not remove
+    // jhipster-needle-entity-add-field - JHipster will add fields here
     public Long getId() {
         return id;
     }
@@ -54,8 +49,13 @@ public class Job implements Serializable {
         this.id = id;
     }
 
+    public Job id(Long id) {
+        this.id = id;
+        return this;
+    }
+
     public String getJobTitle() {
-        return jobTitle;
+        return this.jobTitle;
     }
 
     public Job jobTitle(String jobTitle) {
@@ -68,7 +68,7 @@ public class Job implements Serializable {
     }
 
     public Long getMinSalary() {
-        return minSalary;
+        return this.minSalary;
     }
 
     public Job minSalary(Long minSalary) {
@@ -81,7 +81,7 @@ public class Job implements Serializable {
     }
 
     public Long getMaxSalary() {
-        return maxSalary;
+        return this.maxSalary;
     }
 
     public Job maxSalary(Long maxSalary) {
@@ -94,11 +94,11 @@ public class Job implements Serializable {
     }
 
     public Set<Task> getTasks() {
-        return tasks;
+        return this.tasks;
     }
 
     public Job tasks(Set<Task> tasks) {
-        this.tasks = tasks;
+        this.setTasks(tasks);
         return this;
     }
 
@@ -119,18 +119,19 @@ public class Job implements Serializable {
     }
 
     public Employee getEmployee() {
-        return employee;
+        return this.employee;
     }
 
     public Job employee(Employee employee) {
-        this.employee = employee;
+        this.setEmployee(employee);
         return this;
     }
 
     public void setEmployee(Employee employee) {
         this.employee = employee;
     }
-    // jhipster-needle-entity-add-getters-setters - JHipster will add getters and setters here, do not remove
+
+    // jhipster-needle-entity-add-getters-setters - JHipster will add getters and setters here
 
     @Override
     public boolean equals(Object o) {
@@ -145,9 +146,11 @@ public class Job implements Serializable {
 
     @Override
     public int hashCode() {
-        return 31;
+        // see https://vladmihalcea.com/how-to-implement-equals-and-hashcode-using-the-jpa-entity-identifier/
+        return getClass().hashCode();
     }
 
+    // prettier-ignore
     @Override
     public String toString() {
         return "Job{" +

@@ -1,43 +1,43 @@
 import React, { useEffect } from 'react';
-import { connect } from 'react-redux';
 import { RouteComponentProps } from 'react-router-dom';
 import { Modal, ModalHeader, ModalBody, ModalFooter, Button } from 'reactstrap';
-import { Translate, ICrudGetAction, ICrudDeleteAction } from 'react-jhipster';
+import { Translate } from 'react-jhipster';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
-import { IEmployee } from 'app/shared/model/employee.model';
-import { IRootState } from 'app/shared/reducers';
+import { useAppDispatch, useAppSelector } from 'app/config/store';
 import { getEntity, deleteEntity } from './employee.reducer';
 
-export interface IEmployeeDeleteDialogProps extends StateProps, DispatchProps, RouteComponentProps<{ id: string }> {}
+export const EmployeeDeleteDialog = (props: RouteComponentProps<{ id: string }>) => {
+  const dispatch = useAppDispatch();
 
-export const EmployeeDeleteDialog = (props: IEmployeeDeleteDialogProps) => {
   useEffect(() => {
-    props.getEntity(props.match.params.id);
+    dispatch(getEntity(props.match.params.id));
   }, []);
+
+  const employeeEntity = useAppSelector(state => state.employee.entity);
+  const updateSuccess = useAppSelector(state => state.employee.updateSuccess);
 
   const handleClose = () => {
     props.history.push('/employee');
   };
 
   useEffect(() => {
-    if (props.updateSuccess) {
+    if (updateSuccess) {
       handleClose();
     }
-  }, [props.updateSuccess]);
+  }, [updateSuccess]);
 
   const confirmDelete = () => {
-    props.deleteEntity(props.employeeEntity.id);
+    dispatch(deleteEntity(employeeEntity.id));
   };
 
-  const { employeeEntity } = props;
   return (
     <Modal isOpen toggle={handleClose}>
-      <ModalHeader toggle={handleClose}>
+      <ModalHeader toggle={handleClose} data-cy="employeeDeleteDialogHeading">
         <Translate contentKey="entity.delete.title">Confirm delete operation</Translate>
       </ModalHeader>
-      <ModalBody id="jdemoApp.employee.delete.question">
-        <Translate contentKey="jdemoApp.employee.delete.question" interpolate={{ id: employeeEntity.id }}>
+      <ModalBody id="goApp.employee.delete.question">
+        <Translate contentKey="goApp.employee.delete.question" interpolate={{ id: employeeEntity.id }}>
           Are you sure you want to delete this Employee?
         </Translate>
       </ModalBody>
@@ -47,7 +47,7 @@ export const EmployeeDeleteDialog = (props: IEmployeeDeleteDialogProps) => {
           &nbsp;
           <Translate contentKey="entity.action.cancel">Cancel</Translate>
         </Button>
-        <Button id="jhi-confirm-delete-employee" color="danger" onClick={confirmDelete}>
+        <Button id="jhi-confirm-delete-employee" data-cy="entityConfirmDeleteButton" color="danger" onClick={confirmDelete}>
           <FontAwesomeIcon icon="trash" />
           &nbsp;
           <Translate contentKey="entity.action.delete">Delete</Translate>
@@ -57,14 +57,4 @@ export const EmployeeDeleteDialog = (props: IEmployeeDeleteDialogProps) => {
   );
 };
 
-const mapStateToProps = ({ employee }: IRootState) => ({
-  employeeEntity: employee.entity,
-  updateSuccess: employee.updateSuccess
-});
-
-const mapDispatchToProps = { getEntity, deleteEntity };
-
-type StateProps = ReturnType<typeof mapStateToProps>;
-type DispatchProps = typeof mapDispatchToProps;
-
-export default connect(mapStateToProps, mapDispatchToProps)(EmployeeDeleteDialog);
+export default EmployeeDeleteDialog;

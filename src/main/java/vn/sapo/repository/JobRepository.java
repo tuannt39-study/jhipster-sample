@@ -1,24 +1,20 @@
 package vn.sapo.repository;
 
-import vn.sapo.domain.Job;
-
+import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
-import java.util.Optional;
+import vn.sapo.domain.Job;
 
 /**
- * Spring Data  repository for the Job entity.
+ * Spring Data SQL repository for the Job entity.
  */
 @Repository
-public interface JobRepository extends JpaRepository<Job, Long> {
-
-    @Query(value = "select distinct job from Job job left join fetch job.tasks",
-        countQuery = "select count(distinct job) from Job job")
+public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificationExecutor<Job> {
+    @Query(value = "select distinct job from Job job left join fetch job.tasks", countQuery = "select count(distinct job) from Job job")
     Page<Job> findAllWithEagerRelationships(Pageable pageable);
 
     @Query("select distinct job from Job job left join fetch job.tasks")

@@ -1,17 +1,20 @@
 package vn.sapo.service.impl;
 
-import vn.sapo.service.JobHistoryService;
-import vn.sapo.domain.JobHistory;
-import vn.sapo.repository.JobHistoryRepository;
+import static org.elasticsearch.index.query.QueryBuilders.*;
+
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Optional;
+import vn.sapo.domain.JobHistory;
+import vn.sapo.repository.JobHistoryRepository;
+import vn.sapo.repository.search.JobHistorySearchRepository;
+import vn.sapo.service.JobHistoryService;
+import vn.sapo.service.dto.JobHistoryDTO;
+import vn.sapo.service.mapper.JobHistoryMapper;
 
 /**
  * Service Implementation for managing {@link JobHistory}.
@@ -24,56 +27,79 @@ public class JobHistoryServiceImpl implements JobHistoryService {
 
     private final JobHistoryRepository jobHistoryRepository;
 
-    public JobHistoryServiceImpl(JobHistoryRepository jobHistoryRepository) {
+    private final JobHistoryMapper jobHistoryMapper;
+
+    private final JobHistorySearchRepository jobHistorySearchRepository;
+
+    public JobHistoryServiceImpl(
+        JobHistoryRepository jobHistoryRepository,
+        JobHistoryMapper jobHistoryMapper,
+        JobHistorySearchRepository jobHistorySearchRepository
+    ) {
         this.jobHistoryRepository = jobHistoryRepository;
+        this.jobHistoryMapper = jobHistoryMapper;
+        this.jobHistorySearchRepository = jobHistorySearchRepository;
     }
 
-    /**
-     * Save a jobHistory.
-     *
-     * @param jobHistory the entity to save.
-     * @return the persisted entity.
-     */
     @Override
-    public JobHistory save(JobHistory jobHistory) {
-        log.debug("Request to save JobHistory : {}", jobHistory);
-        return jobHistoryRepository.save(jobHistory);
+    public JobHistoryDTO save(JobHistoryDTO jobHistoryDTO) {
+        log.debug("Request to save JobHistory : {}", jobHistoryDTO);
+        JobHistory jobHistory = jobHistoryMapper.toEntity(jobHistoryDTO);
+        jobHistory = jobHistoryRepository.save(jobHistory);
+        JobHistoryDTO result = jobHistoryMapper.toDto(jobHistory);
+        jobHistorySearchRepository.save(jobHistory);
+        return result;
     }
 
-    /**
-     * Get all the jobHistories.
-     *
-     * @param pageable the pagination information.
-     * @return the list of entities.
-     */
+    @Override
+    public Optional<JobHistoryDTO> partialUpdate(JobHistoryDTO jobHistoryDTO) {
+        log.debug("Request to partially update JobHistory : {}", jobHistoryDTO);
+
+        return jobHistoryRepository
+            .findById(jobHistoryDTO.getId())
+            .map(
+                existingJobHistory -> {
+                    jobHistoryMapper.partialUpdate(existingJobHistory, jobHistoryDTO);
+
+                    return existingJobHistory;
+                }
+            )
+            .map(jobHistoryRepository::save)
+            .map(
+                savedJobHistory -> {
+                    jobHistorySearchRepository.save(savedJobHistory);
+
+                    return savedJobHistory;
+                }
+            )
+            .map(jobHistoryMapper::toDto);
+    }
+
     @Override
     @Transactional(readOnly = true)
-    public Page<JobHistory> findAll(Pageable pageable) {
+    public Page<JobHistoryDTO> findAll(Pageable pageable) {
         log.debug("Request to get all JobHistories");
-        return jobHistoryRepository.findAll(pageable);
+        return jobHistoryRepository.findAll(pageable).map(jobHistoryMapper::toDto);
     }
 
-    /**
-     * Get one jobHistory by id.
-     *
-     * @param id the id of the entity.
-     * @return the entity.
-     */
     @Override
     @Transactional(readOnly = true)
-    public Optional<JobHistory> findOne(Long id) {
+    public Optional<JobHistoryDTO> findOne(Long id) {
         log.debug("Request to get JobHistory : {}", id);
-        return jobHistoryRepository.findById(id);
+        return jobHistoryRepository.findById(id).map(jobHistoryMapper::toDto);
     }
 
-    /**
-     * Delete the jobHistory by id.
-     *
-     * @param id the id of the entity.
-     */
     @Override
     public void delete(Long id) {
         log.debug("Request to delete JobHistory : {}", id);
         jobHistoryRepository.deleteById(id);
+        jobHistorySearchRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<JobHistoryDTO> search(String query, Pageable pageable) {
+        log.debug("Request to search for a page of JobHistories for query {}", query);
+        return jobHistorySearchRepository.search(queryStringQuery(query), pageable).map(jobHistoryMapper::toDto);
     }
 }

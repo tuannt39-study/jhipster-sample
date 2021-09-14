@@ -1,10 +1,12 @@
 {
-  "jdemoApp": {
+  "goApp": {
     "country": {
       "home": {
         "title": "Countries",
+        "refreshListLabel": "Refresh list",
         "createLabel": "Thêm mới một Country",
         "createOrEditLabel": "Thêm mới hoặc cập nhật Country",
+        "search": "Tìm Country",
         "notFound": "No Countries found"
       },
       "created": "Một Country mới được tạo với định danh {{ param }}",
@@ -16,6 +18,7 @@
       "detail": {
         "title": "Country"
       },
+      "id": "ID",
       "countryName": "Country Name",
       "region": "Region"
     }

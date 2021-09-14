@@ -1,45 +1,44 @@
 {
-    "name": "Job",
-    "fields": [
-        {
-            "fieldName": "jobTitle",
-            "fieldType": "String"
-        },
-        {
-            "fieldName": "minSalary",
-            "fieldType": "Long"
-        },
-        {
-            "fieldName": "maxSalary",
-            "fieldType": "Long"
-        }
-    ],
-    "relationships": [
-        {
-            "relationshipType": "many-to-many",
-            "otherEntityName": "task",
-            "otherEntityRelationshipName": "job",
-            "relationshipName": "task",
-            "otherEntityField": "title",
-            "ownerSide": true
-        },
-        {
-            "relationshipType": "many-to-one",
-            "otherEntityName": "employee",
-            "otherEntityRelationshipName": "job",
-            "relationshipName": "employee",
-            "otherEntityField": "id"
-        }
-    ],
-    "changelogDate": "20200418184400",
-    "entityTableName": "job",
-    "dto": "no",
-    "pagination": "pagination",
-    "service": "no",
-    "jpaMetamodelFiltering": false,
-    "fluentMethods": true,
-    "readOnly": false,
-    "embedded": false,
-    "clientRootFolder": "",
-    "applications": "*"
+  "name": "Job",
+  "fields": [
+    {
+      "fieldName": "jobTitle",
+      "fieldType": "String"
+    },
+    {
+      "fieldName": "minSalary",
+      "fieldType": "Long"
+    },
+    {
+      "fieldName": "maxSalary",
+      "fieldType": "Long"
+    }
+  ],
+  "relationships": [
+    {
+      "relationshipType": "many-to-many",
+      "otherEntityName": "task",
+      "otherEntityRelationshipName": "job",
+      "relationshipName": "task",
+      "otherEntityField": "title",
+      "ownerSide": true
+    },
+    {
+      "relationshipType": "many-to-one",
+      "otherEntityName": "employee",
+      "otherEntityRelationshipName": "job",
+      "relationshipName": "employee"
+    }
+  ],
+  "entityTableName": "job",
+  "dto": "mapstruct",
+  "pagination": "pagination",
+  "service": "serviceImpl",
+  "jpaMetamodelFiltering": true,
+  "fluentMethods": true,
+  "readOnly": false,
+  "embedded": false,
+  "applications": "*",
+  "searchEngine": "elasticsearch",
+  "changelogDate": "20210914051555"
 }

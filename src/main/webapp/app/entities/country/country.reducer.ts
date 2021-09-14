@@ -1,143 +1,127 @@
 import axios from 'axios';
-import { ICrudGetAction, ICrudGetAllAction, ICrudPutAction, ICrudDeleteAction } from 'react-jhipster';
+import { createAsyncThunk, isFulfilled, isPending, isRejected } from '@reduxjs/toolkit';
 
 import { cleanEntity } from 'app/shared/util/entity-utils';
-import { REQUEST, SUCCESS, FAILURE } from 'app/shared/reducers/action-type.util';
-
+import { IQueryParams, createEntitySlice, EntityState, serializeAxiosError } from 'app/shared/reducers/reducer.utils';
 import { ICountry, defaultValue } from 'app/shared/model/country.model';
 
-export const ACTION_TYPES = {
-  FETCH_COUNTRY_LIST: 'country/FETCH_COUNTRY_LIST',
-  FETCH_COUNTRY: 'country/FETCH_COUNTRY',
-  CREATE_COUNTRY: 'country/CREATE_COUNTRY',
-  UPDATE_COUNTRY: 'country/UPDATE_COUNTRY',
-  DELETE_COUNTRY: 'country/DELETE_COUNTRY',
-  RESET: 'country/RESET'
-};
-
-const initialState = {
+const initialState: EntityState<ICountry> = {
   loading: false,
   errorMessage: null,
-  entities: [] as ReadonlyArray<ICountry>,
+  entities: [],
   entity: defaultValue,
   updating: false,
-  updateSuccess: false
-};
-
-export type CountryState = Readonly<typeof initialState>;
-
-// Reducer
-
-export default (state: CountryState = initialState, action): CountryState => {
-  switch (action.type) {
-    case REQUEST(ACTION_TYPES.FETCH_COUNTRY_LIST):
-    case REQUEST(ACTION_TYPES.FETCH_COUNTRY):
-      return {
-        ...state,
-        errorMessage: null,
-        updateSuccess: false,
-        loading: true
-      };
-    case REQUEST(ACTION_TYPES.CREATE_COUNTRY):
-    case REQUEST(ACTION_TYPES.UPDATE_COUNTRY):
-    case REQUEST(ACTION_TYPES.DELETE_COUNTRY):
-      return {
-        ...state,
-        errorMessage: null,
-        updateSuccess: false,
-        updating: true
-      };
-    case FAILURE(ACTION_TYPES.FETCH_COUNTRY_LIST):
-    case FAILURE(ACTION_TYPES.FETCH_COUNTRY):
-    case FAILURE(ACTION_TYPES.CREATE_COUNTRY):
-    case FAILURE(ACTION_TYPES.UPDATE_COUNTRY):
-    case FAILURE(ACTION_TYPES.DELETE_COUNTRY):
-      return {
-        ...state,
-        loading: false,
-        updating: false,
-        updateSuccess: false,
-        errorMessage: action.payload
-      };
-    case SUCCESS(ACTION_TYPES.FETCH_COUNTRY_LIST):
-      return {
-        ...state,
-        loading: false,
-        entities: action.payload.data
-      };
-    case SUCCESS(ACTION_TYPES.FETCH_COUNTRY):
-      return {
-        ...state,
-        loading: false,
-        entity: action.payload.data
-      };
-    case SUCCESS(ACTION_TYPES.CREATE_COUNTRY):
-    case SUCCESS(ACTION_TYPES.UPDATE_COUNTRY):
-      return {
-        ...state,
-        updating: false,
-        updateSuccess: true,
-        entity: action.payload.data
-      };
-    case SUCCESS(ACTION_TYPES.DELETE_COUNTRY):
-      return {
-        ...state,
-        updating: false,
-        updateSuccess: true,
-        entity: {}
-      };
-    case ACTION_TYPES.RESET:
-      return {
-        ...initialState
-      };
-    default:
-      return state;
-  }
+  updateSuccess: false,
 };
 
 const apiUrl = 'api/countries';
+const apiSearchUrl = 'api/_search/countries';
 
 // Actions
 
-export const getEntities: ICrudGetAllAction<ICountry> = (page, size, sort) => ({
-  type: ACTION_TYPES.FETCH_COUNTRY_LIST,
-  payload: axios.get<ICountry>(`${apiUrl}?cacheBuster=${new Date().getTime()}`)
+export const searchEntities = createAsyncThunk('country/search_entity', async ({ query, page, size, sort }: IQueryParams) => {
+  const requestUrl = `${apiSearchUrl}?query=${query}`;
+  return axios.get<ICountry[]>(requestUrl);
 });
 
-export const getEntity: ICrudGetAction<ICountry> = id => {
-  const requestUrl = `${apiUrl}/${id}`;
-  return {
-    type: ACTION_TYPES.FETCH_COUNTRY,
-    payload: axios.get<ICountry>(requestUrl)
-  };
-};
-
-export const createEntity: ICrudPutAction<ICountry> = entity => async dispatch => {
-  const result = await dispatch({
-    type: ACTION_TYPES.CREATE_COUNTRY,
-    payload: axios.post(apiUrl, cleanEntity(entity))
-  });
-  dispatch(getEntities());
-  return result;
-};
-
-export const updateEntity: ICrudPutAction<ICountry> = entity => async dispatch => {
-  const result = await dispatch({
-    type: ACTION_TYPES.UPDATE_COUNTRY,
-    payload: axios.put(apiUrl, cleanEntity(entity))
-  });
-  return result;
-};
-
-export const deleteEntity: ICrudDeleteAction<ICountry> = id => async dispatch => {
-  const requestUrl = `${apiUrl}/${id}`;
-  const result = await dispatch({
-    type: ACTION_TYPES.DELETE_COUNTRY,
-    payload: axios.delete(requestUrl)
-  });
-  return result;
-};
-
-export const reset = () => ({
-  type: ACTION_TYPES.RESET
+export const getEntities = createAsyncThunk('country/fetch_entity_list', async ({ page, size, sort }: IQueryParams) => {
+  const requestUrl = `${apiUrl}?cacheBuster=${new Date().getTime()}`;
+  return axios.get<ICountry[]>(requestUrl);
 });
+
+export const getEntity = createAsyncThunk(
+  'country/fetch_entity',
+  async (id: string | number) => {
+    const requestUrl = `${apiUrl}/${id}`;
+    return axios.get<ICountry>(requestUrl);
+  },
+  { serializeError: serializeAxiosError }
+);
+
+export const createEntity = createAsyncThunk(
+  'country/create_entity',
+  async (entity: ICountry, thunkAPI) => {
+    const result = await axios.post<ICountry>(apiUrl, cleanEntity(entity));
+    thunkAPI.dispatch(getEntities({}));
+    return result;
+  },
+  { serializeError: serializeAxiosError }
+);
+
+export const updateEntity = createAsyncThunk(
+  'country/update_entity',
+  async (entity: ICountry, thunkAPI) => {
+    const result = await axios.put<ICountry>(`${apiUrl}/${entity.id}`, cleanEntity(entity));
+    thunkAPI.dispatch(getEntities({}));
+    return result;
+  },
+  { serializeError: serializeAxiosError }
+);
+
+export const partialUpdateEntity = createAsyncThunk(
+  'country/partial_update_entity',
+  async (entity: ICountry, thunkAPI) => {
+    const result = await axios.patch<ICountry>(`${apiUrl}/${entity.id}`, cleanEntity(entity));
+    thunkAPI.dispatch(getEntities({}));
+    return result;
+  },
+  { serializeError: serializeAxiosError }
+);
+
+export const deleteEntity = createAsyncThunk(
+  'country/delete_entity',
+  async (id: string | number, thunkAPI) => {
+    const requestUrl = `${apiUrl}/${id}`;
+    const result = await axios.delete<ICountry>(requestUrl);
+    thunkAPI.dispatch(getEntities({}));
+    return result;
+  },
+  { serializeError: serializeAxiosError }
+);
+
+// slice
+
+export const CountrySlice = createEntitySlice({
+  name: 'country',
+  initialState,
+  extraReducers(builder) {
+    builder
+      .addCase(getEntity.fulfilled, (state, action) => {
+        state.loading = false;
+        state.entity = action.payload.data;
+      })
+      .addCase(deleteEntity.fulfilled, state => {
+        state.updating = false;
+        state.updateSuccess = true;
+        state.entity = {};
+      })
+      .addMatcher(isFulfilled(getEntities, searchEntities), (state, action) => {
+        return {
+          ...state,
+          loading: false,
+          entities: action.payload.data,
+        };
+      })
+      .addMatcher(isFulfilled(createEntity, updateEntity, partialUpdateEntity), (state, action) => {
+        state.updating = false;
+        state.loading = false;
+        state.updateSuccess = true;
+        state.entity = action.payload.data;
+      })
+      .addMatcher(isPending(getEntities, getEntity, searchEntities), state => {
+        state.errorMessage = null;
+        state.updateSuccess = false;
+        state.loading = true;
+      })
+      .addMatcher(isPending(createEntity, updateEntity, partialUpdateEntity, deleteEntity), state => {
+        state.errorMessage = null;
+        state.updateSuccess = false;
+        state.updating = true;
+      });
+  },
+});
+
+export const { reset } = CountrySlice.actions;
+
+// Reducer
+export default CountrySlice.reducer;

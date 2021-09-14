@@ -1,159 +1,126 @@
 import axios from 'axios';
-import {
-  parseHeaderForLinks,
-  loadMoreDataWhenScrolled,
-  ICrudGetAction,
-  ICrudGetAllAction,
-  ICrudPutAction,
-  ICrudDeleteAction
-} from 'react-jhipster';
+import { createAsyncThunk, isFulfilled, isPending, isRejected } from '@reduxjs/toolkit';
+import { loadMoreDataWhenScrolled, parseHeaderForLinks } from 'react-jhipster';
 
 import { cleanEntity } from 'app/shared/util/entity-utils';
-import { REQUEST, SUCCESS, FAILURE } from 'app/shared/reducers/action-type.util';
-
+import { IQueryParams, createEntitySlice, EntityState, serializeAxiosError } from 'app/shared/reducers/reducer.utils';
 import { IEmployee, defaultValue } from 'app/shared/model/employee.model';
 
-export const ACTION_TYPES = {
-  FETCH_EMPLOYEE_LIST: 'employee/FETCH_EMPLOYEE_LIST',
-  FETCH_EMPLOYEE: 'employee/FETCH_EMPLOYEE',
-  CREATE_EMPLOYEE: 'employee/CREATE_EMPLOYEE',
-  UPDATE_EMPLOYEE: 'employee/UPDATE_EMPLOYEE',
-  DELETE_EMPLOYEE: 'employee/DELETE_EMPLOYEE',
-  RESET: 'employee/RESET'
-};
-
-const initialState = {
+const initialState: EntityState<IEmployee> = {
   loading: false,
   errorMessage: null,
-  entities: [] as ReadonlyArray<IEmployee>,
+  entities: [],
   entity: defaultValue,
   links: { next: 0 },
   updating: false,
   totalItems: 0,
-  updateSuccess: false
-};
-
-export type EmployeeState = Readonly<typeof initialState>;
-
-// Reducer
-
-export default (state: EmployeeState = initialState, action): EmployeeState => {
-  switch (action.type) {
-    case REQUEST(ACTION_TYPES.FETCH_EMPLOYEE_LIST):
-    case REQUEST(ACTION_TYPES.FETCH_EMPLOYEE):
-      return {
-        ...state,
-        errorMessage: null,
-        updateSuccess: false,
-        loading: true
-      };
-    case REQUEST(ACTION_TYPES.CREATE_EMPLOYEE):
-    case REQUEST(ACTION_TYPES.UPDATE_EMPLOYEE):
-    case REQUEST(ACTION_TYPES.DELETE_EMPLOYEE):
-      return {
-        ...state,
-        errorMessage: null,
-        updateSuccess: false,
-        updating: true
-      };
-    case FAILURE(ACTION_TYPES.FETCH_EMPLOYEE_LIST):
-    case FAILURE(ACTION_TYPES.FETCH_EMPLOYEE):
-    case FAILURE(ACTION_TYPES.CREATE_EMPLOYEE):
-    case FAILURE(ACTION_TYPES.UPDATE_EMPLOYEE):
-    case FAILURE(ACTION_TYPES.DELETE_EMPLOYEE):
-      return {
-        ...state,
-        loading: false,
-        updating: false,
-        updateSuccess: false,
-        errorMessage: action.payload
-      };
-    case SUCCESS(ACTION_TYPES.FETCH_EMPLOYEE_LIST): {
-      const links = parseHeaderForLinks(action.payload.headers.link);
-
-      return {
-        ...state,
-        loading: false,
-        links,
-        entities: loadMoreDataWhenScrolled(state.entities, action.payload.data, links),
-        totalItems: parseInt(action.payload.headers['x-total-count'], 10)
-      };
-    }
-    case SUCCESS(ACTION_TYPES.FETCH_EMPLOYEE):
-      return {
-        ...state,
-        loading: false,
-        entity: action.payload.data
-      };
-    case SUCCESS(ACTION_TYPES.CREATE_EMPLOYEE):
-    case SUCCESS(ACTION_TYPES.UPDATE_EMPLOYEE):
-      return {
-        ...state,
-        updating: false,
-        updateSuccess: true,
-        entity: action.payload.data
-      };
-    case SUCCESS(ACTION_TYPES.DELETE_EMPLOYEE):
-      return {
-        ...state,
-        updating: false,
-        updateSuccess: true,
-        entity: {}
-      };
-    case ACTION_TYPES.RESET:
-      return {
-        ...initialState
-      };
-    default:
-      return state;
-  }
+  updateSuccess: false,
 };
 
 const apiUrl = 'api/employees';
+const apiSearchUrl = 'api/_search/employees';
 
 // Actions
 
-export const getEntities: ICrudGetAllAction<IEmployee> = (page, size, sort) => {
-  const requestUrl = `${apiUrl}${sort ? `?page=${page}&size=${size}&sort=${sort}` : ''}`;
-  return {
-    type: ACTION_TYPES.FETCH_EMPLOYEE_LIST,
-    payload: axios.get<IEmployee>(`${requestUrl}${sort ? '&' : '?'}cacheBuster=${new Date().getTime()}`)
-  };
-};
-
-export const getEntity: ICrudGetAction<IEmployee> = id => {
-  const requestUrl = `${apiUrl}/${id}`;
-  return {
-    type: ACTION_TYPES.FETCH_EMPLOYEE,
-    payload: axios.get<IEmployee>(requestUrl)
-  };
-};
-
-export const createEntity: ICrudPutAction<IEmployee> = entity => async dispatch => {
-  const result = await dispatch({
-    type: ACTION_TYPES.CREATE_EMPLOYEE,
-    payload: axios.post(apiUrl, cleanEntity(entity))
-  });
-  return result;
-};
-
-export const updateEntity: ICrudPutAction<IEmployee> = entity => async dispatch => {
-  const result = await dispatch({
-    type: ACTION_TYPES.UPDATE_EMPLOYEE,
-    payload: axios.put(apiUrl, cleanEntity(entity))
-  });
-  return result;
-};
-
-export const deleteEntity: ICrudDeleteAction<IEmployee> = id => async dispatch => {
-  const requestUrl = `${apiUrl}/${id}`;
-  const result = await dispatch({
-    type: ACTION_TYPES.DELETE_EMPLOYEE,
-    payload: axios.delete(requestUrl)
-  });
-  return result;
-};
-
-export const reset = () => ({
-  type: ACTION_TYPES.RESET
+export const searchEntities = createAsyncThunk('employee/search_entity', async ({ query, page, size, sort }: IQueryParams) => {
+  const requestUrl = `${apiSearchUrl}?query=${query}${sort ? `&page=${page}&size=${size}&sort=${sort}` : ''}`;
+  return axios.get<IEmployee[]>(requestUrl);
 });
+
+export const getEntities = createAsyncThunk('employee/fetch_entity_list', async ({ page, size, sort }: IQueryParams) => {
+  const requestUrl = `${apiUrl}${sort ? `?page=${page}&size=${size}&sort=${sort}&` : '?'}cacheBuster=${new Date().getTime()}`;
+  return axios.get<IEmployee[]>(requestUrl);
+});
+
+export const getEntity = createAsyncThunk(
+  'employee/fetch_entity',
+  async (id: string | number) => {
+    const requestUrl = `${apiUrl}/${id}`;
+    return axios.get<IEmployee>(requestUrl);
+  },
+  { serializeError: serializeAxiosError }
+);
+
+export const createEntity = createAsyncThunk(
+  'employee/create_entity',
+  async (entity: IEmployee, thunkAPI) => {
+    return axios.post<IEmployee>(apiUrl, cleanEntity(entity));
+  },
+  { serializeError: serializeAxiosError }
+);
+
+export const updateEntity = createAsyncThunk(
+  'employee/update_entity',
+  async (entity: IEmployee, thunkAPI) => {
+    return axios.put<IEmployee>(`${apiUrl}/${entity.id}`, cleanEntity(entity));
+  },
+  { serializeError: serializeAxiosError }
+);
+
+export const partialUpdateEntity = createAsyncThunk(
+  'employee/partial_update_entity',
+  async (entity: IEmployee, thunkAPI) => {
+    return axios.patch<IEmployee>(`${apiUrl}/${entity.id}`, cleanEntity(entity));
+  },
+  { serializeError: serializeAxiosError }
+);
+
+export const deleteEntity = createAsyncThunk(
+  'employee/delete_entity',
+  async (id: string | number, thunkAPI) => {
+    const requestUrl = `${apiUrl}/${id}`;
+    return await axios.delete<IEmployee>(requestUrl);
+  },
+  { serializeError: serializeAxiosError }
+);
+
+// slice
+
+export const EmployeeSlice = createEntitySlice({
+  name: 'employee',
+  initialState,
+  extraReducers(builder) {
+    builder
+      .addCase(getEntity.fulfilled, (state, action) => {
+        state.loading = false;
+        state.entity = action.payload.data;
+      })
+      .addCase(deleteEntity.fulfilled, state => {
+        state.updating = false;
+        state.updateSuccess = true;
+        state.entity = {};
+      })
+      .addMatcher(isFulfilled(getEntities, searchEntities), (state, action) => {
+        const links = parseHeaderForLinks(action.payload.headers.link);
+
+        return {
+          ...state,
+          loading: false,
+          links,
+          entities: loadMoreDataWhenScrolled(state.entities, action.payload.data, links),
+          totalItems: parseInt(action.payload.headers['x-total-count'], 10),
+        };
+      })
+      .addMatcher(isFulfilled(createEntity, updateEntity, partialUpdateEntity), (state, action) => {
+        state.updating = false;
+        state.loading = false;
+        state.updateSuccess = true;
+        state.entity = action.payload.data;
+      })
+      .addMatcher(isPending(getEntities, getEntity, searchEntities), state => {
+        state.errorMessage = null;
+        state.updateSuccess = false;
+        state.loading = true;
+      })
+      .addMatcher(isPending(createEntity, updateEntity, partialUpdateEntity, deleteEntity), state => {
+        state.errorMessage = null;
+        state.updateSuccess = false;
+        state.updating = true;
+      });
+  },
+});
+
+export const { reset } = EmployeeSlice.actions;
+
+// Reducer
+export default EmployeeSlice.reducer;

@@ -1,48 +1,113 @@
 import React, { useState, useEffect } from 'react';
 import InfiniteScroll from 'react-infinite-scroller';
-import { connect } from 'react-redux';
 import { Link, RouteComponentProps } from 'react-router-dom';
-import { Button, Col, Row, Table } from 'reactstrap';
-import { Translate, ICrudGetAllAction, TextFormat, getSortState, IPaginationBaseState } from 'react-jhipster';
+import { Button, Input, InputGroup, FormGroup, Form, Col, Row, Table } from 'reactstrap';
+import { Translate, translate, TextFormat, getSortState } from 'react-jhipster';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
-import { IRootState } from 'app/shared/reducers';
-import { getEntities, reset } from './employee.reducer';
+import { searchEntities, getEntities, reset } from './employee.reducer';
 import { IEmployee } from 'app/shared/model/employee.model';
 import { APP_DATE_FORMAT, APP_LOCAL_DATE_FORMAT } from 'app/config/constants';
-import { ITEMS_PER_PAGE } from 'app/shared/util/pagination.constants';
+import { ASC, DESC, ITEMS_PER_PAGE, SORT } from 'app/shared/util/pagination.constants';
+import { overridePaginationStateWithQueryParams } from 'app/shared/util/entity-utils';
+import { useAppDispatch, useAppSelector } from 'app/config/store';
 
-export interface IEmployeeProps extends StateProps, DispatchProps, RouteComponentProps<{ url: string }> {}
+export const Employee = (props: RouteComponentProps<{ url: string }>) => {
+  const dispatch = useAppDispatch();
 
-export const Employee = (props: IEmployeeProps) => {
-  const [paginationState, setPaginationState] = useState(getSortState(props.location, ITEMS_PER_PAGE));
+  const [search, setSearch] = useState('');
+  const [paginationState, setPaginationState] = useState(
+    overridePaginationStateWithQueryParams(getSortState(props.location, ITEMS_PER_PAGE, 'id'), props.location.search)
+  );
   const [sorting, setSorting] = useState(false);
 
+  const employeeList = useAppSelector(state => state.employee.entities);
+  const loading = useAppSelector(state => state.employee.loading);
+  const totalItems = useAppSelector(state => state.employee.totalItems);
+  const links = useAppSelector(state => state.employee.links);
+  const entity = useAppSelector(state => state.employee.entity);
+  const updateSuccess = useAppSelector(state => state.employee.updateSuccess);
+
   const getAllEntities = () => {
-    props.getEntities(paginationState.activePage - 1, paginationState.itemsPerPage, `${paginationState.sort},${paginationState.order}`);
+    if (search) {
+      dispatch(
+        searchEntities({
+          query: search,
+          page: paginationState.activePage - 1,
+          size: paginationState.itemsPerPage,
+          sort: `${paginationState.sort},${paginationState.order}`,
+        })
+      );
+    } else {
+      dispatch(
+        getEntities({
+          page: paginationState.activePage - 1,
+          size: paginationState.itemsPerPage,
+          sort: `${paginationState.sort},${paginationState.order}`,
+        })
+      );
+    }
   };
 
   const resetAll = () => {
-    props.reset();
+    dispatch(reset());
     setPaginationState({
       ...paginationState,
-      activePage: 1
+      activePage: 1,
     });
+    dispatch(getEntities({}));
   };
 
   useEffect(() => {
     resetAll();
   }, []);
 
+  const startSearching = e => {
+    if (search) {
+      dispatch(reset());
+      setPaginationState({
+        ...paginationState,
+        activePage: 1,
+      });
+      dispatch(
+        searchEntities({
+          query: search,
+          page: paginationState.activePage - 1,
+          size: paginationState.itemsPerPage,
+          sort: `${paginationState.sort},${paginationState.order}`,
+        })
+      );
+    }
+    e.preventDefault();
+  };
+
+  const clear = () => {
+    dispatch(reset());
+    setSearch('');
+    setPaginationState({
+      ...paginationState,
+      activePage: 1,
+    });
+    dispatch(getEntities({}));
+  };
+
+  const handleSearch = event => setSearch(event.target.value);
+
+  useEffect(() => {
+    if (updateSuccess) {
+      resetAll();
+    }
+  }, [updateSuccess]);
+
   useEffect(() => {
     getAllEntities();
   }, [paginationState.activePage]);
 
   const handleLoadMore = () => {
-    if (window.pageYOffset > 0) {
+    if ((window as any).pageYOffset > 0) {
       setPaginationState({
         ...paginationState,
-        activePage: paginationState.activePage + 1
+        activePage: paginationState.activePage + 1,
       });
     }
   };
@@ -52,35 +117,69 @@ export const Employee = (props: IEmployeeProps) => {
       getAllEntities();
       setSorting(false);
     }
-  }, [sorting]);
+  }, [sorting, search]);
 
   const sort = p => () => {
-    props.reset();
+    dispatch(reset());
     setPaginationState({
       ...paginationState,
       activePage: 1,
-      order: paginationState.order === 'asc' ? 'desc' : 'asc',
-      sort: p
+      order: paginationState.order === ASC ? DESC : ASC,
+      sort: p,
     });
     setSorting(true);
   };
 
-  const { employeeList, match, loading } = props;
+  const handleSyncList = () => {
+    resetAll();
+  };
+
+  const { match } = props;
+
   return (
     <div>
-      <h2 id="employee-heading">
-        <Translate contentKey="jdemoApp.employee.home.title">Employees</Translate>
-        <Link to={`${match.url}/new`} className="btn btn-primary float-right jh-create-entity" id="jh-create-entity">
-          <FontAwesomeIcon icon="plus" />
-          &nbsp;
-          <Translate contentKey="jdemoApp.employee.home.createLabel">Create new Employee</Translate>
-        </Link>
+      <h2 id="employee-heading" data-cy="EmployeeHeading">
+        <Translate contentKey="goApp.employee.home.title">Employees</Translate>
+        <div className="d-flex justify-content-end">
+          <Button className="mr-2" color="info" onClick={handleSyncList} disabled={loading}>
+            <FontAwesomeIcon icon="sync" spin={loading} />{' '}
+            <Translate contentKey="goApp.employee.home.refreshListLabel">Refresh List</Translate>
+          </Button>
+          <Link to={`${match.url}/new`} className="btn btn-primary jh-create-entity" id="jh-create-entity" data-cy="entityCreateButton">
+            <FontAwesomeIcon icon="plus" />
+            &nbsp;
+            <Translate contentKey="goApp.employee.home.createLabel">Create new Employee</Translate>
+          </Link>
+        </div>
       </h2>
+      <Row>
+        <Col sm="12">
+          <Form onSubmit={startSearching}>
+            <FormGroup>
+              <InputGroup>
+                <Input
+                  type="text"
+                  name="search"
+                  defaultValue={search}
+                  onChange={handleSearch}
+                  placeholder={translate('goApp.employee.home.search')}
+                />
+                <Button className="input-group-addon">
+                  <FontAwesomeIcon icon="search" />
+                </Button>
+                <Button type="reset" className="input-group-addon" onClick={clear}>
+                  <FontAwesomeIcon icon="trash" />
+                </Button>
+              </InputGroup>
+            </FormGroup>
+          </Form>
+        </Col>
+      </Row>
       <div className="table-responsive">
         <InfiniteScroll
           pageStart={paginationState.activePage}
           loadMore={handleLoadMore}
-          hasMore={paginationState.activePage - 1 < props.links.next}
+          hasMore={paginationState.activePage - 1 < links.next}
           loader={<div className="loader">Loading ...</div>}
           threshold={0}
           initialLoad={false}
@@ -90,41 +189,41 @@ export const Employee = (props: IEmployeeProps) => {
               <thead>
                 <tr>
                   <th className="hand" onClick={sort('id')}>
-                    <Translate contentKey="global.field.id">ID</Translate> <FontAwesomeIcon icon="sort" />
+                    <Translate contentKey="goApp.employee.id">ID</Translate> <FontAwesomeIcon icon="sort" />
                   </th>
                   <th className="hand" onClick={sort('firstName')}>
-                    <Translate contentKey="jdemoApp.employee.firstName">First Name</Translate> <FontAwesomeIcon icon="sort" />
+                    <Translate contentKey="goApp.employee.firstName">First Name</Translate> <FontAwesomeIcon icon="sort" />
                   </th>
                   <th className="hand" onClick={sort('lastName')}>
-                    <Translate contentKey="jdemoApp.employee.lastName">Last Name</Translate> <FontAwesomeIcon icon="sort" />
+                    <Translate contentKey="goApp.employee.lastName">Last Name</Translate> <FontAwesomeIcon icon="sort" />
                   </th>
                   <th className="hand" onClick={sort('email')}>
-                    <Translate contentKey="jdemoApp.employee.email">Email</Translate> <FontAwesomeIcon icon="sort" />
+                    <Translate contentKey="goApp.employee.email">Email</Translate> <FontAwesomeIcon icon="sort" />
                   </th>
                   <th className="hand" onClick={sort('phoneNumber')}>
-                    <Translate contentKey="jdemoApp.employee.phoneNumber">Phone Number</Translate> <FontAwesomeIcon icon="sort" />
+                    <Translate contentKey="goApp.employee.phoneNumber">Phone Number</Translate> <FontAwesomeIcon icon="sort" />
                   </th>
                   <th className="hand" onClick={sort('hireDate')}>
-                    <Translate contentKey="jdemoApp.employee.hireDate">Hire Date</Translate> <FontAwesomeIcon icon="sort" />
+                    <Translate contentKey="goApp.employee.hireDate">Hire Date</Translate> <FontAwesomeIcon icon="sort" />
                   </th>
                   <th className="hand" onClick={sort('salary')}>
-                    <Translate contentKey="jdemoApp.employee.salary">Salary</Translate> <FontAwesomeIcon icon="sort" />
+                    <Translate contentKey="goApp.employee.salary">Salary</Translate> <FontAwesomeIcon icon="sort" />
                   </th>
                   <th className="hand" onClick={sort('commissionPct')}>
-                    <Translate contentKey="jdemoApp.employee.commissionPct">Commission Pct</Translate> <FontAwesomeIcon icon="sort" />
+                    <Translate contentKey="goApp.employee.commissionPct">Commission Pct</Translate> <FontAwesomeIcon icon="sort" />
                   </th>
                   <th>
-                    <Translate contentKey="jdemoApp.employee.manager">Manager</Translate> <FontAwesomeIcon icon="sort" />
+                    <Translate contentKey="goApp.employee.manager">Manager</Translate> <FontAwesomeIcon icon="sort" />
                   </th>
                   <th>
-                    <Translate contentKey="jdemoApp.employee.department">Department</Translate> <FontAwesomeIcon icon="sort" />
+                    <Translate contentKey="goApp.employee.department">Department</Translate> <FontAwesomeIcon icon="sort" />
                   </th>
                   <th />
                 </tr>
               </thead>
               <tbody>
                 {employeeList.map((employee, i) => (
-                  <tr key={`entity-${i}`}>
+                  <tr key={`entity-${i}`} data-cy="entityTable">
                     <td>
                       <Button tag={Link} to={`${match.url}/${employee.id}`} color="link" size="sm">
                         {employee.id}
@@ -134,28 +233,26 @@ export const Employee = (props: IEmployeeProps) => {
                     <td>{employee.lastName}</td>
                     <td>{employee.email}</td>
                     <td>{employee.phoneNumber}</td>
-                    <td>
-                      <TextFormat type="date" value={employee.hireDate} format={APP_DATE_FORMAT} />
-                    </td>
+                    <td>{employee.hireDate ? <TextFormat type="date" value={employee.hireDate} format={APP_DATE_FORMAT} /> : null}</td>
                     <td>{employee.salary}</td>
                     <td>{employee.commissionPct}</td>
                     <td>{employee.manager ? <Link to={`employee/${employee.manager.id}`}>{employee.manager.id}</Link> : ''}</td>
                     <td>{employee.department ? <Link to={`department/${employee.department.id}`}>{employee.department.id}</Link> : ''}</td>
                     <td className="text-right">
                       <div className="btn-group flex-btn-group-container">
-                        <Button tag={Link} to={`${match.url}/${employee.id}`} color="info" size="sm">
+                        <Button tag={Link} to={`${match.url}/${employee.id}`} color="info" size="sm" data-cy="entityDetailsButton">
                           <FontAwesomeIcon icon="eye" />{' '}
                           <span className="d-none d-md-inline">
                             <Translate contentKey="entity.action.view">View</Translate>
                           </span>
                         </Button>
-                        <Button tag={Link} to={`${match.url}/${employee.id}/edit`} color="primary" size="sm">
+                        <Button tag={Link} to={`${match.url}/${employee.id}/edit`} color="primary" size="sm" data-cy="entityEditButton">
                           <FontAwesomeIcon icon="pencil-alt" />{' '}
                           <span className="d-none d-md-inline">
                             <Translate contentKey="entity.action.edit">Edit</Translate>
                           </span>
                         </Button>
-                        <Button tag={Link} to={`${match.url}/${employee.id}/delete`} color="danger" size="sm">
+                        <Button tag={Link} to={`${match.url}/${employee.id}/delete`} color="danger" size="sm" data-cy="entityDeleteButton">
                           <FontAwesomeIcon icon="trash" />{' '}
                           <span className="d-none d-md-inline">
                             <Translate contentKey="entity.action.delete">Delete</Translate>
@@ -170,7 +267,7 @@ export const Employee = (props: IEmployeeProps) => {
           ) : (
             !loading && (
               <div className="alert alert-warning">
-                <Translate contentKey="jdemoApp.employee.home.notFound">No Employees found</Translate>
+                <Translate contentKey="goApp.employee.home.notFound">No Employees found</Translate>
               </div>
             )
           )}
@@ -180,21 +277,4 @@ export const Employee = (props: IEmployeeProps) => {
   );
 };
 
-const mapStateToProps = ({ employee }: IRootState) => ({
-  employeeList: employee.entities,
-  loading: employee.loading,
-  totalItems: employee.totalItems,
-  links: employee.links,
-  entity: employee.entity,
-  updateSuccess: employee.updateSuccess
-});
-
-const mapDispatchToProps = {
-  getEntities,
-  reset
-};
-
-type StateProps = ReturnType<typeof mapStateToProps>;
-type DispatchProps = typeof mapDispatchToProps;
-
-export default connect(mapStateToProps, mapDispatchToProps)(Employee);
+export default Employee;

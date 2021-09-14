@@ -1,27 +1,23 @@
 package vn.sapo.domain;
 
-import io.swagger.annotations.ApiModel;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
-import javax.persistence.*;
-
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.Serializable;
-import java.util.Objects;
+import javax.persistence.*;
+import org.springframework.data.elasticsearch.annotations.FieldType;
 
 /**
  * not an ignored comment
  */
-@ApiModel(description = "not an ignored comment")
 @Entity
 @Table(name = "location")
-@Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
+@org.springframework.data.elasticsearch.annotations.Document(indexName = "location")
 public class Location implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "sequenceGenerator")
+    @SequenceGenerator(name = "sequenceGenerator")
     private Long id;
 
     @Column(name = "street_address")
@@ -36,11 +32,12 @@ public class Location implements Serializable {
     @Column(name = "state_province")
     private String stateProvince;
 
+    @JsonIgnoreProperties(value = { "region" }, allowSetters = true)
     @OneToOne
     @JoinColumn(unique = true)
     private Country country;
 
-    // jhipster-needle-entity-add-field - JHipster will add fields here, do not remove
+    // jhipster-needle-entity-add-field - JHipster will add fields here
     public Long getId() {
         return id;
     }
@@ -49,8 +46,13 @@ public class Location implements Serializable {
         this.id = id;
     }
 
+    public Location id(Long id) {
+        this.id = id;
+        return this;
+    }
+
     public String getStreetAddress() {
-        return streetAddress;
+        return this.streetAddress;
     }
 
     public Location streetAddress(String streetAddress) {
@@ -63,7 +65,7 @@ public class Location implements Serializable {
     }
 
     public String getPostalCode() {
-        return postalCode;
+        return this.postalCode;
     }
 
     public Location postalCode(String postalCode) {
@@ -76,7 +78,7 @@ public class Location implements Serializable {
     }
 
     public String getCity() {
-        return city;
+        return this.city;
     }
 
     public Location city(String city) {
@@ -89,7 +91,7 @@ public class Location implements Serializable {
     }
 
     public String getStateProvince() {
-        return stateProvince;
+        return this.stateProvince;
     }
 
     public Location stateProvince(String stateProvince) {
@@ -102,18 +104,19 @@ public class Location implements Serializable {
     }
 
     public Country getCountry() {
-        return country;
+        return this.country;
     }
 
     public Location country(Country country) {
-        this.country = country;
+        this.setCountry(country);
         return this;
     }
 
     public void setCountry(Country country) {
         this.country = country;
     }
-    // jhipster-needle-entity-add-getters-setters - JHipster will add getters and setters here, do not remove
+
+    // jhipster-needle-entity-add-getters-setters - JHipster will add getters and setters here
 
     @Override
     public boolean equals(Object o) {
@@ -128,9 +131,11 @@ public class Location implements Serializable {
 
     @Override
     public int hashCode() {
-        return 31;
+        // see https://vladmihalcea.com/how-to-implement-equals-and-hashcode-using-the-jpa-entity-identifier/
+        return getClass().hashCode();
     }
 
+    // prettier-ignore
     @Override
     public String toString() {
         return "Location{" +
