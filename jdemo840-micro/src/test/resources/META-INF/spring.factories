@@ -1,0 +1,4 @@
+org.springframework.test.context.ContextCustomizerFactory = vn.com.msb.config.\
+    SqlTestContainersSpringContextCustomizerFactory,vn.com.msb.config.\
+    RedisTestContainersSpringContextCustomizerFactory,vn.com.msb.config.\
+    KafkaTestContainersSpringContextCustomizerFactory
